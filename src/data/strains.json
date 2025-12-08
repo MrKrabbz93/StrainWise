@@ -1,0 +1,42 @@
+[
+  {
+    "id": 1,
+    "name": "Blue Dream",
+    "type": "Sativa-Dominant Hybrid",
+    "thc": "18%",
+    "cbd": "0.1%",
+    "effects": ["Creative", "Energizing", "Euphoric"],
+    "medical": ["Stress", "Depression", "Pain"],
+    "description": "A potent cross between Blueberry and Haze, Blue Dream balances full-body relaxation with gentle cerebral invigoration."
+  },
+  {
+    "id": 2,
+    "name": "Granddaddy Purple",
+    "type": "Indica",
+    "thc": "23%",
+    "cbd": "0.05%",
+    "effects": ["Relaxed", "Sleepy", "Happy"],
+    "medical": ["Insomnia", "Pain", "Stress"],
+    "description": "Famous for its deep purple bloom, this strain is a staple for those seeking deep relaxation and sleep aid."
+  },
+  {
+    "id": 3,
+    "name": "Jack Herer",
+    "type": "Sativa",
+    "thc": "20%",
+    "cbd": "0.2%",
+    "effects": ["Energetic", "Uplifted", "Focused"],
+    "medical": ["Fatigue", "ADHD", "Depression"],
+    "description": "Named after the cannabis activist, this strain captures both cerebral elevation and heavy resin production."
+  },
+  {
+    "id": 4,
+    "name": "OG Kush",
+    "type": "Hybrid",
+    "thc": "22%",
+    "cbd": "0.08%",
+    "effects": ["Hungry", "Relaxed", "Euphoric"],
+    "medical": ["Stress", "Anxiety", "Pain"],
+    "description": "The backbone of West Coast cannabis varieties, OG Kush is cherished for its ability to crush stress under the weight of its heavy euphoria."
+  }
+]

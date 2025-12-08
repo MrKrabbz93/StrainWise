@@ -1,0 +1,48 @@
+[
+    {
+        "id": "d1",
+        "name": "Green Horizon Collective",
+        "address": "123 High St, Los Angeles, CA",
+        "rating": 4.8,
+        "inventory": [
+            1,
+            3,
+            4
+        ],
+        "location": {
+            "lat": 34.0522,
+            "lng": -118.2437
+        }
+    },
+    {
+        "id": "d2",
+        "name": "Elevated Wellness",
+        "address": "456 Wellness Blvd, Los Angeles, CA",
+        "rating": 4.5,
+        "inventory": [
+            2,
+            4,
+            1
+        ],
+        "location": {
+            "lat": 34.0622,
+            "lng": -118.2537
+        }
+    },
+    {
+        "id": "d3",
+        "name": "The Herbal Center",
+        "address": "789 Organic Way, San Francisco, CA",
+        "rating": 4.9,
+        "inventory": [
+            1,
+            2,
+            3,
+            4
+        ],
+        "location": {
+            "lat": 34.0422,
+            "lng": -118.2337
+        }
+    }
+]
