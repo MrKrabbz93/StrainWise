@@ -72,9 +72,45 @@ const Layout = ({ children, activeTab, onTabChange, user, onLoginClick, onSettin
                 </div>
             </header>
 
-            <main className="flex-1 relative z-10">
+            <main className="flex-1 relative z-10 pb-20 md:pb-0">
                 {children}
             </main>
+
+            {/* Mobile Bottom Navigation */}
+            <nav className="md:hidden fixed bottom-0 left-0 w-full bg-slate-950/90 backdrop-blur-xl border-t border-white/10 z-50 px-6 py-4 flex justify-between items-center safe-area-bottom">
+                {navItems.map((item) => {
+                    const Icon = item.icon;
+                    const isActive = activeTab === item.id;
+                    return (
+                        <button
+                            key={item.id}
+                            onClick={() => onTabChange && onTabChange(item.id)}
+                            className={`flex flex-col items-center gap-1 transition-colors ${isActive ? 'text-emerald-400' : 'text-slate-500 hover:text-slate-300'
+                                }`}
+                        >
+                            <div className={`p-1.5 rounded-full ${isActive ? 'bg-emerald-500/10' : ''}`}>
+                                <Icon className={`w-6 h-6 ${isActive ? 'fill-current/20' : ''}`} />
+                            </div>
+                            <span className="text-[10px] font-medium">{item.label}</span>
+                        </button>
+                    );
+                })}
+                {/* Profile Button Mobile */}
+                <button
+                    onClick={() => onTabChange && onTabChange('profile')}
+                    className={`flex flex-col items-center gap-1 transition-colors ${activeTab === 'profile' ? 'text-emerald-400' : 'text-slate-500'}`}
+                >
+                    <div className={`w-9 h-9 rounded-full flex items-center justify-center border ${activeTab === 'profile' ? 'border-emerald-500' : 'border-slate-700'
+                        } ${!user ? 'bg-slate-800' : 'bg-emerald-500 text-slate-950'}`}>
+                        {user ? (
+                            <span className="text-xs font-bold">{user.email[0].toUpperCase()}</span>
+                        ) : (
+                            <User className="w-5 h-5" />
+                        )}
+                    </div>
+                    <span className="text-[10px] font-medium">{user ? 'Profile' : 'Sign In'}</span>
+                </button>
+            </nav>
         </div>
     );
 };
