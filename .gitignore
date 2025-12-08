@@ -70,7 +70,7 @@ typings/
 
 # gatsby files
 .cache/
-public
+# public - REMOVED to allow manifest.json
 
 # vuepress build output
 .vuepress/dist
