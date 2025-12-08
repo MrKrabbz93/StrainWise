@@ -144,7 +144,7 @@ const DispensaryMap = ({ dispensaries, center = { lat: 34.0522, lng: -118.2437 }
                     position={dispensary.location}
                     onClick={() => setSelectedDispensary(dispensary)}
                     icon={{
-                        url: "http://maps.google.com/mapfiles/ms/icons/green-dot.png"
+                        url: "https://maps.google.com/mapfiles/ms/icons/green-dot.png"
                     }}
                 />
             ))}
