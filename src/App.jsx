@@ -25,6 +25,8 @@ function App() {
   const [user, setUser] = useState(null);
   const [hasEntered, setHasEntered] = useState(false);
 
+  const [userLocation, setUserLocation] = useState(null);
+
   const handleRecommendations = (strainNames) => {
     const filtered = strainsData.filter(strain => strainNames.includes(strain.name));
     setRecommendations(filtered);
@@ -64,7 +66,7 @@ function App() {
       case 'strains':
         return <StrainLibrary />;
       case 'dispensaries':
-        return <DispensaryList dispensaries={dispensariesData} />;
+        return <DispensaryList dispensaries={dispensariesData} userLocation={userLocation} />;
       case 'consult':
       default:
         return (
@@ -93,7 +95,7 @@ function App() {
               animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: 0.5, duration: 0.5 }}
             >
-              <ConsultantInterface onRecommend={handleRecommendations} />
+              <ConsultantInterface onRecommend={handleRecommendations} userLocation={userLocation} />
             </motion.div>
 
             <AnimatePresence>
@@ -121,6 +123,7 @@ function App() {
                         <StrainCard
                           strain={strain}
                           dispensaries={dispensariesData}
+                          userLocation={userLocation}
                         />
                       </motion.div>
                     ))}
@@ -143,6 +146,18 @@ function App() {
         >
           <LandingPage onEnter={() => {
             setHasEntered(true);
+            // Request Location
+            if (navigator.geolocation) {
+              navigator.geolocation.getCurrentPosition(
+                (position) => {
+                  setUserLocation({
+                    lat: position.coords.latitude,
+                    lng: position.coords.longitude
+                  });
+                },
+                (error) => console.log("Location access denied or error:", error)
+              );
+            }
             // Check if tutorial was already seen in this session or local storage
             const seen = localStorage.getItem('strainwise_tutorial_seen');
             if (!seen) {

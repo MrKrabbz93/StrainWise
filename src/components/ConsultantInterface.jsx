@@ -9,7 +9,7 @@ const PERSONAS = [
   { id: 'scientist', name: 'The Scientist', icon: Bot, desc: 'Technical & Precise' },
 ];
 
-const ConsultantInterface = ({ onRecommend }) => {
+const ConsultantInterface = ({ onRecommend, userLocation }) => {
   const [messages, setMessages] = useState([
     {
       role: 'assistant',
@@ -38,7 +38,7 @@ const ConsultantInterface = ({ onRecommend }) => {
     setIsLoading(true);
 
     try {
-      const responseText = await generateResponse(messages, input, persona);
+      const responseText = await generateResponse(messages, input, persona, userLocation);
 
       setMessages(prev => [...prev, { role: 'assistant', content: responseText }]);
 

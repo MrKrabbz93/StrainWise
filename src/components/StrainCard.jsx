@@ -4,7 +4,7 @@ import { generateCustomerReviews } from '../lib/gemini';
 import { motion, AnimatePresence } from 'framer-motion';
 import DispensaryMap from './DispensaryMap';
 
-const StrainCard = ({ strain, dispensaries }) => {
+const StrainCard = ({ strain, dispensaries, userLocation }) => {
     const [reviews, setReviews] = useState([]);
     const [isGenerating, setIsGenerating] = useState(true);
     const [showMap, setShowMap] = useState(false);
@@ -39,8 +39,8 @@ const StrainCard = ({ strain, dispensaries }) => {
                         <div>
                             <h3 className="text-xl font-bold text-slate-100 group-hover:text-emerald-400 transition-colors">{strain.name}</h3>
                             <span className={`text-xs font-medium px-2 py-1 rounded-full border border-white/5 ${strain.type.includes('Sativa') ? 'bg-orange-500/10 text-orange-400' :
-                                    strain.type.includes('Indica') ? 'bg-purple-500/10 text-purple-400' :
-                                        'bg-emerald-500/10 text-emerald-400'
+                                strain.type.includes('Indica') ? 'bg-purple-500/10 text-purple-400' :
+                                    'bg-emerald-500/10 text-emerald-400'
                                 }`}>
                                 {strain.type}
                             </span>
@@ -171,7 +171,7 @@ const StrainCard = ({ strain, dispensaries }) => {
                                 <X className="w-5 h-5" />
                             </button>
                             <div className="h-full w-full">
-                                <DispensaryMap dispensaries={availableDispensaries} />
+                                <DispensaryMap dispensaries={availableDispensaries} userLocation={userLocation} />
                             </div>
                         </motion.div>
                     </motion.div>

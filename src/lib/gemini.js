@@ -64,8 +64,14 @@ const callGemini = async (payload) => {
     }
 };
 
-export const generateResponse = async (history, userMessage, persona = "helpful") => {
-    const systemPrompt = getPersonaPrompt(persona);
+export const generateResponse = async (history, userMessage, persona = "helpful", location = null) => {
+    let systemPrompt = getPersonaPrompt(persona);
+
+    if (location) {
+        systemPrompt += `\n\nCONTEXT: The user is currently located at Coordinates: ${location.lat}, ${location.lng}. 
+        If they ask about "nearby" or "local" availability, acknowledge their location context (e.g., "I see you are in [City/Area based on coords if known, otherwise just acknowledge local context]").`;
+    }
+
     const response = await callGemini({
         type: 'chat',
         prompt: userMessage,

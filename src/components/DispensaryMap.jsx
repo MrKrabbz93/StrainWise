@@ -90,7 +90,7 @@ const mapStyles = [
     },
 ];
 
-const DispensaryMap = ({ dispensaries, center = { lat: 34.0522, lng: -118.2437 } }) => {
+const DispensaryMap = ({ dispensaries, center = { lat: 34.0522, lng: -118.2437 }, userLocation }) => {
     const { isLoaded } = useJsApiLoader({
         id: 'google-map-script',
         googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || ''
@@ -106,6 +106,8 @@ const DispensaryMap = ({ dispensaries, center = { lat: 34.0522, lng: -118.2437 }
     const onUnmount = useCallback(function callback(map) {
         setMap(null);
     }, []);
+
+    const mapCenter = userLocation || center;
 
     if (!import.meta.env.VITE_GOOGLE_MAPS_API_KEY) {
         return (
@@ -128,8 +130,8 @@ const DispensaryMap = ({ dispensaries, center = { lat: 34.0522, lng: -118.2437 }
     return (
         <GoogleMap
             mapContainerStyle={containerStyle}
-            center={center}
-            zoom={12}
+            center={mapCenter}
+            zoom={userLocation ? 13 : 12}
             onLoad={onLoad}
             onUnmount={onUnmount}
             options={{
@@ -138,6 +140,22 @@ const DispensaryMap = ({ dispensaries, center = { lat: 34.0522, lng: -118.2437 }
                 zoomControl: true,
             }}
         >
+            {/* User Location Marker */}
+            {userLocation && (
+                <Marker
+                    position={userLocation}
+                    icon={{
+                        path: window.google.maps.SymbolPath.CIRCLE,
+                        scale: 8,
+                        fillColor: "#4285F4",
+                        fillOpacity: 1,
+                        strokeColor: "white",
+                        strokeWeight: 2,
+                    }}
+                    title="You are here"
+                />
+            )}
+
             {dispensaries.map((dispensary) => (
                 <Marker
                     key={dispensary.id}

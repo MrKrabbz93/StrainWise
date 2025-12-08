@@ -2,7 +2,7 @@ import React from 'react';
 import DispensaryMap from './DispensaryMap';
 import { MapPin, Star, Phone, Clock } from 'lucide-react';
 
-const DispensaryList = ({ dispensaries }) => {
+const DispensaryList = ({ dispensaries, userLocation }) => {
     return (
         <div className="max-w-6xl mx-auto h-[calc(100vh-12rem)] flex gap-6">
             {/* List View */}
@@ -33,7 +33,7 @@ const DispensaryList = ({ dispensaries }) => {
 
             {/* Map View */}
             <div className="flex-1 bg-slate-900 rounded-2xl overflow-hidden border border-slate-800 relative">
-                <DispensaryMap dispensaries={dispensaries} />
+                <DispensaryMap dispensaries={dispensaries} userLocation={userLocation} />
             </div>
         </div>
     );
