@@ -61,7 +61,7 @@ const LandingPage = ({ onEnter }) => {
                 transition={{ delay: 1.5, duration: 1 }}
                 className="absolute bottom-8 text-slate-600 text-xs tracking-widest uppercase"
             >
-                Est. 2025 • Los Angeles • CA
+                Est. 2025 • Perth • WA
             </motion.div>
         </div>
     );

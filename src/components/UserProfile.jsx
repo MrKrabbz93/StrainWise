@@ -65,17 +65,27 @@ const UserProfile = ({ user, onLogout }) => {
     };
 
     const handleSaveProfile = async () => {
-        if (!profile) return;
+        // Prepare the payload
         const updates = {
+            id: user.id, // RLS requires ID match
             username: editForm.username,
             bio: editForm.bio,
             avatar_url: editForm.avatar_url,
-            interests: editForm.interests
+            interests: editForm.interests,
+            updated_at: new Date()
         };
 
-        setProfile({ ...profile, ...updates });
-        await supabase.from('profiles').update(updates).eq('id', user.id);
-        setIsEditing(false);
+        // UPSERT: Create if new, Update if exists
+        const { error } = await supabase.from('profiles').upsert(updates);
+
+        if (error) {
+            console.error("Error saving profile:", error);
+            alert("Failed to save profile. Please try again.");
+        } else {
+            setProfile({ ...profile, ...updates });
+            setIsEditing(false);
+            // alert("Profile saved successfully!"); // Optional: Toast notification
+        }
     };
 
     const generateAvatar = () => {

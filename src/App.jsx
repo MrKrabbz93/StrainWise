@@ -148,15 +148,24 @@ function App() {
             setHasEntered(true);
             // Request Location
             if (navigator.geolocation) {
+              console.log("Requesting user location...");
               navigator.geolocation.getCurrentPosition(
                 (position) => {
+                  console.log("Location found:", position.coords);
                   setUserLocation({
                     lat: position.coords.latitude,
                     lng: position.coords.longitude
                   });
                 },
-                (error) => console.log("Location access denied or error:", error)
+                (error) => {
+                  console.warn("Location access denied or error:", error);
+                  // Optional: Set default to Perth if denied explicitly, though 'null' handles it in Map component.
+                  // But setting it here ensures "Nearby" logic uses Perth if desired.
+                  if (error.code === 1) alert("Please enable location services to find dispensaries near you.");
+                }
               );
+            } else {
+              alert("Geolocation is not supported by your browser.");
             }
             // Check if tutorial was already seen in this session or local storage
             const seen = localStorage.getItem('strainwise_tutorial_seen');

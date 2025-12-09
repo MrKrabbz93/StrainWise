@@ -90,7 +90,7 @@ const mapStyles = [
     },
 ];
 
-const DispensaryMap = ({ dispensaries, center = { lat: 34.0522, lng: -118.2437 }, userLocation }) => {
+const DispensaryMap = ({ dispensaries, center = { lat: -31.9505, lng: 115.8605 }, userLocation }) => {
     const { isLoaded } = useJsApiLoader({
         id: 'google-map-script',
         googleMapsApiKey: import.meta.env.VITE_GOOGLE_MAPS_API_KEY || ''
