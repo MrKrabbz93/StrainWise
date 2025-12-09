@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, BookOpen, Dna, Thermometer, Activity, Sprout, MapPin, X, Sparkles, Heart } from 'lucide-react';
+import { Search, BookOpen, Dna, Thermometer, Activity, Sprout, MapPin, X, Sparkles, Heart, ArrowRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { generateStrainEncyclopediaEntry } from '../lib/gemini';
 import { supabase } from '../lib/supabase';

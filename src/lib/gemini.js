@@ -58,11 +58,19 @@ const callGemini = async (payload) => {
     }
 
     if (payload.type === 'chat') {
+        // Gemini requires history to start with 'user'. Filter out initial 'model' greeting if present.
+        let validHistory = payload.history.map(msg => ({
+            role: msg.role === 'assistant' ? 'model' : 'user',
+            parts: [{ text: msg.content }],
+        }));
+
+        // Remove leading model messages until we find a user message
+        while (validHistory.length > 0 && validHistory[0].role === 'model') {
+            validHistory.shift();
+        }
+
         const chat = model.startChat({
-            history: payload.history.map(msg => ({
-                role: msg.role === 'assistant' ? 'model' : 'user',
-                parts: [{ text: msg.content }],
-            })),
+            history: validHistory,
             generationConfig: { maxOutputTokens: 200 },
         });
         const result = await chat.sendMessage(`${payload.systemPrompt}\nUser: ${payload.prompt}`);
