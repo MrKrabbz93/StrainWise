@@ -202,6 +202,10 @@ export const generateStrainEncyclopediaEntry = async (strainName) => {
                 visual_profile: aiData.visual_profile
             }]);
             console.log("Saved new knowledge to Encyclopedia:", aiData.name);
+
+            // 3. THE MYCELIUM EFFECT (Recursive Expansion)
+            expandLineage(aiData.lineage);
+
         } catch (dbErr) {
             console.error("Failed to save to DB:", dbErr);
         }
@@ -211,6 +215,30 @@ export const generateStrainEncyclopediaEntry = async (strainName) => {
         console.error("Error generating encyclopedia entry:", error);
         return null;
     }
+};
+
+// Recursive Background Expansion
+const expandLineage = async (lineageString) => {
+    if (!lineageString || lineageString.toLowerCase().includes('unknown')) return;
+
+    // Split lineage string (e.g., "Blueberry x Haze" -> ["Blueberry", "Haze"])
+    const parents = lineageString.split(/ x | \/ /).map(p => p.trim()).filter(p => p.length > 2);
+
+    console.log(`🍄 Mycelium Network: Discovered parents of current strain:`, parents);
+
+    parents.forEach(async (parentName) => {
+        // Random check to prevent infinite loops or exploding quotas in one go
+        if (Math.random() > 0.7) return;
+
+        // Check if parent exists
+        const { data } = await supabase.from('strains').select('id').ilike('name', parentName).maybeSingle();
+
+        if (!data) {
+            console.log(`🍄 Mycelium Network: Spawning agent to discover '${parentName}'...`);
+            // Recursively call the main generation function (which will save it and trigger its own parents!)
+            generateStrainEncyclopediaEntry(parentName);
+        }
+    });
 };
 
 export const generateWelcomeMessage = async (userName) => {
