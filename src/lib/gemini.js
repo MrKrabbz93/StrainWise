@@ -2,18 +2,6 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 
 // Initialize Gemini API (Legacy/Dev Mode)
 const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
-
-let genAI = null;
-let model = null;
-
-if (API_KEY) {
-    genAI = new GoogleGenerativeAI(API_KEY);
-    model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
-}
-
-export const isAIEnabled = () => !!API_KEY;
-
-// Helper to switch between Direct (Dev) and Backend (Prod)
 const callGemini = async (payload) => {
     // In a real scenario, we'd check import.meta.env.PROD
     // For this implementation, we try the backend first, fallback to direct if it fails (or if we are in dev and want direct)
