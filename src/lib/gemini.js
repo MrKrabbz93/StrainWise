@@ -26,22 +26,33 @@ const callGemini = async (payload) => {
 
     if (import.meta.env.PROD) {
         try {
+            console.log("Attempting backend call to /api/gemini...");
             const response = await fetch('/api/gemini', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
-            if (!response.ok) throw new Error('Backend error');
+
+            if (!response.ok) {
+                const errData = await response.json();
+                console.error("Backend Error Response:", errData);
+                throw new Error(errData.error || `Server responded with ${response.status}`);
+            }
+
             const data = await response.json();
             return data.text;
         } catch (e) {
-            console.error("Backend failed, falling back to direct (if key exists)", e);
-            // Fallback to direct if key exists
+            console.error("Backend failed:", e);
+            // If backend exists but fails (e.g. 500), we should probably notify the user 
+            // instead of silently falling back to a null model which triggers "Demo Mode".
+            // Let's return the error message for debugging.
+            return `System Error: ${e.message}. (Please verify Vercel Env Vars)`;
         }
     }
 
     // Direct SDK (Dev Mode / Fallback)
     if (!model) {
+        console.warn("Client-side Gemini model not initialized (Missing Key?)");
         await new Promise(r => setTimeout(r, 1000));
         return null; // Signal demo mode
     }
