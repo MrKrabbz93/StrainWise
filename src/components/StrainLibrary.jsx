@@ -85,6 +85,8 @@ const StrainLibrary = () => {
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
                     placeholder="Search for a strain (e.g., 'Granddaddy Purple')..."
+                    id="strain-search-input"
+                    name="strainSearch"
                     className="w-full bg-slate-900/50 border border-slate-700 rounded-full py-4 px-6 pl-12 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 transition-all"
                 />
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />

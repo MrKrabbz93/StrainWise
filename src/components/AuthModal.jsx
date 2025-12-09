@@ -124,6 +124,8 @@ const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
                                             value={email}
                                             onChange={(e) => setEmail(e.target.value)}
                                             required
+                                            id="auth-email"
+                                            name="email"
                                             className="w-full bg-slate-950 border border-slate-800 rounded-lg py-3 pl-10 pr-4 text-slate-200 focus:outline-none focus:border-emerald-500/50 transition-colors"
                                             placeholder="you@example.com"
                                         />
@@ -139,6 +141,8 @@ const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
                                             value={password}
                                             onChange={(e) => setPassword(e.target.value)}
                                             required
+                                            id="auth-password"
+                                            name="password"
                                             className="w-full bg-slate-950 border border-slate-800 rounded-lg py-3 pl-10 pr-4 text-slate-200 focus:outline-none focus:border-emerald-500/50 transition-colors"
                                             placeholder="••••••••"
                                         />

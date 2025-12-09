@@ -163,6 +163,8 @@ const ConsultantInterface = ({ onRecommend, userLocation }) => {
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder={isAIEnabled() ? "Ask anything..." : "Describe your needs (Demo Mode)..."}
+          id="consultant-chat-input"
+          name="chatQuery"
           className="w-full bg-slate-950/50 border border-white/10 rounded-xl py-4 px-6 pr-12 text-slate-200 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 transition-all placeholder:text-slate-600 backdrop-blur-sm"
         />
         <button
