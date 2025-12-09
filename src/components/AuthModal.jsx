@@ -70,6 +70,8 @@ const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
             console.error("Auth Error:", err);
             if (err.message && (err.message.includes('localStorage') || err.message.includes('quota') || err.message.includes('IO error'))) {
                 setError("Device storage is full. Please free up space on your C: drive to sign in.");
+            } else if (err.message && (err.message.toLowerCase().includes('leak') || err.message.toLowerCase().includes('breach') || err.message.toLowerCase().includes('security purposes'))) {
+                setError("Security Alert: This password has appeared in a data breach. Please choose a different, stronger password.");
             } else {
                 setError(err.message || "Authentication failed. Please try again.");
             }

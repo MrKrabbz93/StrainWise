@@ -36,7 +36,8 @@ const callGemini = async (payload) => {
             if (!response.ok) {
                 const errData = await response.json();
                 console.error("Backend Error Response:", errData);
-                throw new Error(errData.error || `Server responded with ${response.status}`);
+                // Throw the detailed message if available, otherwise the generic error
+                throw new Error(errData.details || errData.error || `Server responded with ${response.status}`);
             }
 
             const data = await response.json();

@@ -19,7 +19,7 @@ export default async function handler(req, res) {
         return res.status(405).json({ error: 'Method not allowed' });
     }
 
-    const { prompt, type, history, systemPrompt } = req.body;
+    const { prompt, type, history = [], systemPrompt } = req.body;
     const apiKey = process.env.VITE_GEMINI_API_KEY;
 
     if (!apiKey) {
