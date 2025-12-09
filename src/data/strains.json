@@ -5,9 +5,18 @@
     "type": "Sativa-Dominant Hybrid",
     "thc": "18%",
     "cbd": "0.1%",
-    "effects": ["Creative", "Energizing", "Euphoric"],
-    "medical": ["Stress", "Depression", "Pain"],
-    "description": "A potent cross between Blueberry and Haze, Blue Dream balances full-body relaxation with gentle cerebral invigoration."
+    "effects": [
+      "Creative",
+      "Energizing",
+      "Euphoric"
+    ],
+    "medical": [
+      "Stress",
+      "Depression",
+      "Pain"
+    ],
+    "description": "A potent cross between Blueberry and Haze, Blue Dream balances full-body relaxation with gentle cerebral invigoration.",
+    "visual_profile": "green_sativa"
   },
   {
     "id": 2,
@@ -15,9 +24,18 @@
     "type": "Indica",
     "thc": "23%",
     "cbd": "0.05%",
-    "effects": ["Relaxed", "Sleepy", "Happy"],
-    "medical": ["Insomnia", "Pain", "Stress"],
-    "description": "Famous for its deep purple bloom, this strain is a staple for those seeking deep relaxation and sleep aid."
+    "effects": [
+      "Relaxed",
+      "Sleepy",
+      "Happy"
+    ],
+    "medical": [
+      "Insomnia",
+      "Pain",
+      "Stress"
+    ],
+    "description": "Famous for its deep purple bloom, this strain is a staple for those seeking deep relaxation and sleep aid.",
+    "visual_profile": "purple"
   },
   {
     "id": 3,
@@ -25,9 +43,18 @@
     "type": "Sativa",
     "thc": "20%",
     "cbd": "0.2%",
-    "effects": ["Energetic", "Uplifted", "Focused"],
-    "medical": ["Fatigue", "ADHD", "Depression"],
-    "description": "Named after the cannabis activist, this strain captures both cerebral elevation and heavy resin production."
+    "effects": [
+      "Energetic",
+      "Uplifted",
+      "Focused"
+    ],
+    "medical": [
+      "Fatigue",
+      "ADHD",
+      "Depression"
+    ],
+    "description": "Named after the cannabis activist, this strain captures both cerebral elevation and heavy resin production.",
+    "visual_profile": "frosty"
   },
   {
     "id": 4,
@@ -35,8 +62,226 @@
     "type": "Hybrid",
     "thc": "22%",
     "cbd": "0.08%",
-    "effects": ["Hungry", "Relaxed", "Euphoric"],
-    "medical": ["Stress", "Anxiety", "Pain"],
-    "description": "The backbone of West Coast cannabis varieties, OG Kush is cherished for its ability to crush stress under the weight of its heavy euphoria."
+    "effects": [
+      "Hungry",
+      "Relaxed",
+      "Euphoric"
+    ],
+    "medical": [
+      "Stress",
+      "Anxiety",
+      "Pain"
+    ],
+    "description": "The backbone of West Coast cannabis varieties, OG Kush is cherished for its ability to crush stress under the weight of its heavy euphoria.",
+    "visual_profile": "dark"
+  },
+  {
+    "id": 5,
+    "name": "Sour Diesel",
+    "type": "Sativa",
+    "thc": "22%",
+    "cbd": "0.2%",
+    "effects": [
+      "Energetic",
+      "Happy",
+      "Creative"
+    ],
+    "medical": [
+      "Depression",
+      "Fatigue",
+      "Stress"
+    ],
+    "description": "A fast-acting strain known for its pungent, diesel-like aroma. It provides dreamy, cerebral effects that are long-lasting.",
+    "visual_profile": "green_sativa"
+  },
+  {
+    "id": 6,
+    "name": "Gelato",
+    "type": "Hybrid",
+    "thc": "20%",
+    "cbd": "0.1%",
+    "effects": [
+      "Euphoric",
+      "Aroused",
+      "Happy"
+    ],
+    "medical": [
+      "Stress",
+      "Anxiety",
+      "Pain"
+    ],
+    "description": "A cross between Sunset Sherbet and Thin Mint GSC, known for its dessert-like aroma and heavy-handed physical relaxation.",
+    "visual_profile": "purple"
+  },
+  {
+    "id": 7,
+    "name": "Wedding Cake",
+    "type": "Hybrid",
+    "thc": "24%",
+    "cbd": "0.1%",
+    "effects": [
+      "Relaxed",
+      "Happy",
+      "Euphoric"
+    ],
+    "medical": [
+      "Pain",
+      "Insomnia",
+      "Appetite Loss"
+    ],
+    "description": "Rich and tangy with earthy pepper flavors, this strain provides a relaxing and euphoric high that calms the body and mind.",
+    "visual_profile": "frosty"
+  },
+  {
+    "id": 8,
+    "name": "Purple Haze",
+    "type": "Sativa",
+    "thc": "17%",
+    "cbd": "0.1%",
+    "effects": [
+      "Euphoric",
+      "Energetic",
+      "Happy"
+    ],
+    "medical": [
+      "Depression",
+      "Stress",
+      "Fatigue"
+    ],
+    "description": "Popularized by Jimi Hendrix's 1967 classic, this strain delivers a dreamy burst of euphoria that brings veteran consumers back to their psychedelic heyday.",
+    "visual_profile": "purple"
+  },
+  {
+    "id": 9,
+    "name": "Northern Lights",
+    "type": "Indica",
+    "thc": "18%",
+    "cbd": "0.1%",
+    "effects": [
+      "Relaxed",
+      "Sleepy",
+      "Happy"
+    ],
+    "medical": [
+      "Insomnia",
+      "Pain",
+      "Stress"
+    ],
+    "description": "A pure indica cherished for its resinous buds, pungently sweet, spicy aromas, and muscle-relaxing effects.",
+    "visual_profile": "dark"
+  },
+  {
+    "id": 10,
+    "name": "Girl Scout Cookies (GSC)",
+    "type": "Hybrid",
+    "thc": "19%",
+    "cbd": "0.1%",
+    "effects": [
+      "Happy",
+      "Euphoric",
+      "Relaxed"
+    ],
+    "medical": [
+      "Stress",
+      "Depression",
+      "Pain"
+    ],
+    "description": "GSC typically offers waves of full-body relaxation paired with time-bending cerebral effects.",
+    "visual_profile": "frosty"
+  },
+  {
+    "id": 11,
+    "name": "Pineapple Express",
+    "type": "Hybrid",
+    "thc": "20%",
+    "cbd": "0.1%",
+    "effects": [
+      "Happy",
+      "Uplifted",
+      "Energetic"
+    ],
+    "medical": [
+      "Depression",
+      "Stress",
+      "Pain"
+    ],
+    "description": "Made famous by the movie, this strain combines the potent and flavorful forces of parent strains Trainwreck and Hawaiian.",
+    "visual_profile": "orange"
+  },
+  {
+    "id": 12,
+    "name": "Durban Poison",
+    "type": "Sativa",
+    "thc": "19%",
+    "cbd": "0.02%",
+    "effects": [
+      "Energetic",
+      "Uplifted",
+      "Focused"
+    ],
+    "medical": [
+      "Fatigue",
+      "Depression",
+      "Nausea"
+    ],
+    "description": "This pure sativa originates from the South African port city of Durban. It has gained popularity worldwide for its sweet smell and energetic, uplifting effects.",
+    "visual_profile": "green_sativa"
+  },
+  {
+    "id": 13,
+    "name": "Bubba Kush",
+    "type": "Indica",
+    "thc": "17%",
+    "cbd": "0.1%",
+    "effects": [
+      "Relaxed",
+      "Sleepy",
+      "Hungry"
+    ],
+    "medical": [
+      "Insomnia",
+      "Pain",
+      "Stress"
+    ],
+    "description": "Bubba Kush is known for its heavy tranquilizing effects. Sweet hashish flavors with subtle notes of chocolate and coffee come through on the exhale.",
+    "visual_profile": "dark"
+  },
+  {
+    "id": 14,
+    "name": "White Widow",
+    "type": "Hybrid",
+    "thc": "15%",
+    "cbd": "0.1%",
+    "effects": [
+      "Happy",
+      "Euphoric",
+      "Relaxed"
+    ],
+    "medical": [
+      "Stress",
+      "Pain",
+      "Depression"
+    ],
+    "description": "Among the most famous strains worldwide, White Widow is a balanced hybrid first bred in the Netherlands by Green House Seeds.",
+    "visual_profile": "frosty"
+  },
+  {
+    "id": 15,
+    "name": "Super Lemon Haze",
+    "type": "Sativa",
+    "thc": "19%",
+    "cbd": "0.1%",
+    "effects": [
+      "Energetic",
+      "Happy",
+      "Creative"
+    ],
+    "medical": [
+      "Depression",
+      "Fatigue",
+      "Anxiety"
+    ],
+    "description": "A kief-caked multi-colored wonder with a tart, zesty lemon flavor and aroma. Verify uplifting and energetic.",
+    "visual_profile": "orange"
   }
 ]

@@ -25,9 +25,13 @@ const StrainLibrary = () => {
     const [nearbyDispensaries, setNearbyDispensaries] = useState([]);
     const [stockStatus, setStockStatus] = useState(null);
 
-    const handleSearch = async (e) => {
-        e.preventDefault();
-        if (!query.trim()) return;
+    const handleSearch = async (e, directQuery = null) => {
+        if (e) e.preventDefault();
+        const searchTerm = directQuery || query;
+        if (!searchTerm?.trim()) return;
+
+        // Update UI to match specific search if triggered by click
+        if (directQuery) setQuery(directQuery);
 
         setIsLoading(true);
         setError(null);
@@ -35,7 +39,7 @@ const StrainLibrary = () => {
         setStockStatus(null);
 
         try {
-            const data = await generateStrainEncyclopediaEntry(query);
+            const data = await generateStrainEncyclopediaEntry(searchTerm);
             if (data) {
                 setStrainData(data);
             } else {
@@ -98,6 +102,83 @@ const StrainLibrary = () => {
                     {isLoading ? 'Searching...' : 'Search'}
                 </button>
             </form>
+
+            {/* Browse Categories & Featured Section - Only show when no search/result */}
+            {!strainData && (
+                <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ duration: 0.5 }}
+                    className="space-y-12"
+                >
+                    {/* Browse by Effect */}
+                    <div>
+                        <h3 className="text-xl font-bold text-slate-200 mb-6 flex items-center gap-2">
+                            <Sparkles className="w-5 h-5 text-emerald-400" />
+                            Browse by Vibe
+                        </h3>
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            {[
+                                { name: "Relax & Sleep", id: "sleep", color: "bg-purple-900/50", border: "border-purple-500/20", icon: "🌙" },
+                                { name: "Focus & Creative", id: "creative", color: "bg-cyan-900/50", border: "border-cyan-500/20", icon: "💡" },
+                                { name: "Relief & Pain", id: "pain", color: "bg-red-900/50", border: "border-red-500/20", icon: "❤️" },
+                                { name: "Social & Fun", id: "happy", color: "bg-amber-900/50", border: "border-amber-500/20", icon: "🎉" }
+                            ].map((category) => (
+                                <button
+                                    key={category.id}
+                                    onClick={() => handleSearch(null, category.id)}
+                                    className={`p-6 rounded-2xl border ${category.border} ${category.color} hover:scale-105 active:scale-95 transition-all text-left group`}
+                                >
+                                    <span className="text-2xl mb-2 block group-hover:scale-110 transition-transform">{category.icon}</span>
+                                    <span className="font-bold text-slate-200 text-sm md:text-base">{category.name}</span>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Featured Strains Grid */}
+                    <div>
+                        <h3 className="text-xl font-bold text-slate-200 mb-6 flex items-center gap-2">
+                            <BookOpen className="w-5 h-5 text-emerald-400" />
+                            Featured Strains
+                        </h3>
+                        <div className="grid md:grid-cols-2 gap-6">
+                            {strainsData.slice(0, 6).map((strain) => (
+                                <motion.div
+                                    key={strain.id}
+                                    whileHover={{ y: -5 }}
+                                    onClick={() => handleSearch(null, strain.name)}
+                                    className="bg-slate-900 border border-white/5 rounded-2xl overflow-hidden cursor-pointer group hover:shadow-[0_0_30px_rgba(16,185,129,0.1)] transition-all"
+                                >
+                                    <div className={`h-32 w-full relative overflow-hidden ${visualProfiles[strain.visual_profile] || visualProfiles.green_sativa}`}>
+                                        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-20 mix-blend-overlay" />
+                                        <div className="absolute inset-0 bg-gradient-to-t from-slate-900 to-transparent" />
+                                        <div className="absolute bottom-4 left-4">
+                                            <h4 className="font-bold text-white text-lg">{strain.name}</h4>
+                                            <span className="text-xs text-slate-300 opacity-80">{strain.type}</span>
+                                        </div>
+                                        <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <div className="bg-slate-950/50 backdrop-blur-md p-2 rounded-full border border-white/10">
+                                                <ArrowRight className="w-4 h-4 text-white" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div className="p-4">
+                                        <p className="text-sm text-slate-400 line-clamp-2">{strain.description}</p>
+                                        <div className="flex gap-2 mt-3">
+                                            {strain.effects.slice(0, 2).map((e, i) => (
+                                                <span key={i} className="text-[10px] uppercase tracking-wider px-2 py-1 bg-white/5 rounded text-slate-500 border border-white/5">
+                                                    {e}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </motion.div>
+                            ))}
+                        </div>
+                    </div>
+                </motion.div>
+            )}
 
             <AnimatePresence mode="wait">
                 {error && (
@@ -162,7 +243,14 @@ const StrainLibrary = () => {
                                     <Sparkles className="w-5 h-5 text-emerald-400" />
                                     <span className="text-xs font-bold uppercase tracking-wider text-emerald-400">Visual Profile: {strainData.visual_profile.replace('_', ' ')}</span>
                                 </div>
-                                <h3 className="text-4xl font-bold text-white mb-2">{strainData.name}</h3>
+                                <h3 className="text-4xl font-bold text-white mb-2 flex items-center gap-3">
+                                    {strainData.name}
+                                    {strainData.id && (
+                                        <span className="text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2 py-1 rounded-full flex items-center gap-1" title="Verified in Encyclopedia">
+                                            <Sparkles className="w-3 h-3" /> Verified
+                                        </span>
+                                    )}
+                                </h3>
                                 <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${strainData.type.toLowerCase().includes('sativa') ? 'border-orange-500/30 text-orange-400 bg-orange-500/10' :
                                     strainData.type.toLowerCase().includes('indica') ? 'border-purple-500/30 text-purple-400 bg-purple-500/10' :
                                         'border-emerald-500/30 text-emerald-400 bg-emerald-500/10'

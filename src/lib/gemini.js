@@ -133,7 +133,25 @@ export const generateCustomerReviews = async (strainName) => {
     }
 };
 
+import { supabase } from './supabase';
+
 export const generateStrainEncyclopediaEntry = async (strainName) => {
+    // 1. Check Supabase DB first (The "Encyclopedia")
+    try {
+        const { data, error } = await supabase
+            .from('strains')
+            .select('*')
+            .ilike('name', strainName) // Case-insensitive match
+            .maybeSingle();
+
+        if (!error && data) {
+            console.log("Found in Encyclopedia:", data.name);
+            return data;
+        }
+    } catch (err) {
+        console.warn("DB Read Error:", err);
+    }
+
     if (!isAIEnabled() && !import.meta.env.PROD) {
         return {
             name: strainName,
@@ -167,7 +185,28 @@ export const generateStrainEncyclopediaEntry = async (strainName) => {
         const text = await callGemini({ type: 'generate', prompt });
         if (!text) throw new Error("Demo mode");
         const jsonStr = text.replace(/```json/g, '').replace(/```/g, '').trim();
-        return JSON.parse(jsonStr);
+        const aiData = JSON.parse(jsonStr);
+
+        // 2. Save to Supabase (Grow the Encyclopedia)
+        try {
+            await supabase.from('strains').insert([{
+                name: aiData.name, // Ensure exact name match
+                description: aiData.description,
+                type: aiData.type,
+                thc: aiData.thc,
+                lineage: aiData.lineage,
+                terpenes: aiData.terpenes,
+                effects: aiData.effects,
+                medical: aiData.medical,
+                growing: aiData.growing,
+                visual_profile: aiData.visual_profile
+            }]);
+            console.log("Saved new knowledge to Encyclopedia:", aiData.name);
+        } catch (dbErr) {
+            console.error("Failed to save to DB:", dbErr);
+        }
+
+        return aiData;
     } catch (error) {
         console.error("Error generating encyclopedia entry:", error);
         return null;
