@@ -129,9 +129,15 @@ export const generateCustomerReviews = async (strainName) => {
 
     try {
         const text = await callGemini({ type: 'generate', prompt });
-        if (!text) throw new Error("Demo mode");
-        const jsonStr = text.replace(/```json/g, '').replace(/```/g, '').trim();
-        return JSON.parse(jsonStr);
+        if (!text || text.startsWith("System Error")) throw new Error("AI Generation Failed");
+
+        try {
+            const jsonStr = text.replace(/```json/g, '').replace(/```/g, '').trim();
+            return JSON.parse(jsonStr);
+        } catch (parseErr) {
+            console.error("JSON Parse Error:", parseErr);
+            throw new Error("Invalid format");
+        }
     } catch (error) {
         console.error("Error generating reviews:", error);
         return [
@@ -191,9 +197,16 @@ export const generateStrainEncyclopediaEntry = async (strainName) => {
 
     try {
         const text = await callGemini({ type: 'generate', prompt });
-        if (!text) throw new Error("Demo mode");
-        const jsonStr = text.replace(/```json/g, '').replace(/```/g, '').trim();
-        const aiData = JSON.parse(jsonStr);
+        if (!text || text.startsWith("System Error")) throw new Error("AI Generation Failed: " + text);
+
+        let aiData;
+        try {
+            const jsonStr = text.replace(/```json/g, '').replace(/```/g, '').trim();
+            aiData = JSON.parse(jsonStr);
+        } catch (parseErr) {
+            console.error("JSON Parse Error for Encyclopedia:", parseErr);
+            return null; // Return null to signal UI to show error or keep loading state
+        }
 
         // 2. Save to Supabase (Grow the Encyclopedia)
         try {
@@ -267,9 +280,15 @@ export const generateWelcomeMessage = async (userName) => {
 
     try {
         const text = await callGemini({ type: 'generate', prompt });
-        if (!text) throw new Error("Demo mode");
-        const jsonStr = text.replace(/```json/g, '').replace(/```/g, '').trim();
-        return JSON.parse(jsonStr);
+        if (!text || text.startsWith("System Error")) throw new Error("AI Generation Failed");
+
+        try {
+            const jsonStr = text.replace(/```json/g, '').replace(/```/g, '').trim();
+            return JSON.parse(jsonStr);
+        } catch (parseErr) {
+            console.error("JSON Parse Error:", parseErr);
+            throw new Error("Invalid format");
+        }
     } catch (error) {
         console.error("Error generating welcome message:", error);
         return {
