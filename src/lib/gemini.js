@@ -90,7 +90,7 @@ export const generateResponse = async (history, userMessage, persona = "helpful"
         systemPrompt
     });
 
-    if (!response) return "I'm currently in demo mode. To unlock my full AI capabilities, please add a VITE_GEMINI_API_KEY to your .env file.";
+    if (!response) return "⚠️ Debug: Client-side AI failed. Are you on Localhost? If so, you need a .env file. If on Vercel, the Backend failed silently.";
     return response;
 };
 
