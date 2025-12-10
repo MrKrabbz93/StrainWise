@@ -4,11 +4,14 @@ import { generateCustomerReviews } from '../lib/gemini';
 import { motion, AnimatePresence } from 'framer-motion';
 import DispensaryMap from './DispensaryMap';
 import { getStrainImageUrl } from '../lib/images';
+import { generateImage } from '../lib/gemini';
 
 const StrainCard = ({ strain, dispensaries, userLocation }) => {
     const [reviews, setReviews] = useState([]);
     const [isGenerating, setIsGenerating] = useState(true);
     const [showMap, setShowMap] = useState(false);
+    const [customImage, setCustomImage] = useState(null);
+    const [isGeneratingImage, setIsGeneratingImage] = useState(false);
 
     // Find dispensaries that have this strain
     const availableDispensaries = dispensaries.filter(d => d.inventory.includes(strain.id));
@@ -26,6 +29,19 @@ const StrainCard = ({ strain, dispensaries, userLocation }) => {
         return () => { mounted = false; };
     }, [strain]);
 
+    const handleGenerateImage = async (e) => {
+        e.stopPropagation(); // Prevent card click
+        setIsGeneratingImage(true);
+        const prompt = `A cinematic, photorealistic close-up shot of the cannabis strain "${strain.name}". 
+        Visual traits: ${strain.visual_profile || 'lush green'}. 
+        Mood: ${strain.type === 'Sativa' ? 'Energetic, bright, sunny' : 'Relaxing, mystical, deep purple tones'}.
+        High quality, 8k resolution, macro photography.`;
+
+        const url = await generateImage(prompt);
+        if (url) setCustomImage(url);
+        setIsGeneratingImage(false);
+    };
+
     return (
         <>
             <motion.div
@@ -35,13 +51,23 @@ const StrainCard = ({ strain, dispensaries, userLocation }) => {
                 {/* Glow Effect */}
                 <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
 
-                <div className="h-32 w-full relative overflow-hidden">
+                <div className="h-32 w-full relative overflow-hidden group/image">
                     <img
-                        src={getStrainImageUrl(strain)}
+                        src={customImage || getStrainImageUrl(strain)}
                         alt={strain.name}
                         className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/20 to-transparent" />
+
+                    {/* Magic Generate Button */}
+                    <button
+                        onClick={handleGenerateImage}
+                        disabled={isGeneratingImage}
+                        className="absolute top-2 right-2 p-2 bg-slate-950/50 backdrop-blur-md rounded-full text-white/70 hover:text-emerald-400 hover:bg-slate-950/80 border border-white/10 opacity-0 group-hover/image:opacity-100 transition-all z-20"
+                        title="Generate Unique AI Art for this Strain"
+                    >
+                        {isGeneratingImage ? <Sparkles className="w-4 h-4 animate-spin text-emerald-400" /> : <Sparkles className="w-4 h-4" />}
+                    </button>
                 </div>
 
                 <div className="p-6 relative z-10">

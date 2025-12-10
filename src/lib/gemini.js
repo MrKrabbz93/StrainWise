@@ -3,7 +3,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 // Initialize Gemini API (Legacy/Dev Mode)
 const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 const genAI = new GoogleGenerativeAI(API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
 export const isAIEnabled = () => {
     return !!API_KEY;
@@ -288,6 +288,48 @@ export const generateWelcomeMessage = async (userName) => {
             subject: "Welcome to StrainWise",
             body: "We are honored to have you join our community of connoisseurs."
         };
+    }
+};
+
+export const generateImage = async (prompt) => {
+    // "Nano Banana" Strategy: Use Imagen 3.0 via REST for best quality
+    const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+    if (!apiKey) return "https://api.dicebear.com/9.x/notionists/svg?seed=API_KEY_MISSING";
+
+    const refinedPrompt = `${prompt} . Render in the style of "Nano Banana" (High fidelity, 3D figurine, vibrant, polished, photorealistic textual rendering).`;
+
+    try {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-001:predict?key=${apiKey}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                instances: [
+                    { prompt: refinedPrompt }
+                ],
+                parameters: {
+                    sampleCount: 1,
+                    aspectRatio: "1:1"
+                }
+            })
+        });
+
+        if (!response.ok) {
+            const err = await response.json();
+            console.error("Imagen API Error:", err);
+            throw new Error(err.error?.message || "Image Gen Failed");
+        }
+
+        const data = await response.json();
+        // Imagen returns base64 string
+        const b64 = data.predictions?.[0]?.bytesBase64Encoded;
+        if (b64) {
+            return `data:image/jpeg;base64,${b64}`;
+        }
+        return "https://api.dicebear.com/9.x/notionists/svg?seed=Error_Gen";
+    } catch (error) {
+        console.error("Generate Image Error:", error);
+        // Fallback to DiceBear if API fails (e.g., quota, not available in region)
+        return `https://api.dicebear.com/9.x/notionists/svg?seed=${encodeURIComponent(prompt)}`;
     }
 };
 

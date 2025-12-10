@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { User, Heart, LogOut, Loader2, Mail, Users, Globe, Lock, Edit2, Save, Briefcase, ShieldCheck, Sparkles, RefreshCw } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { generateImage } from '../lib/gemini';
 
 const UserProfile = ({ user, onLogout }) => {
     const [activeTab, setActiveTab] = useState('favorites');
@@ -88,10 +89,15 @@ const UserProfile = ({ user, onLogout }) => {
         }
     };
 
-    const generateAvatar = () => {
-        const seed = editForm.avatar_prompt || editForm.username || user.email;
-        const url = `https://api.dicebear.com/9.x/notionists/svg?seed=${encodeURIComponent(seed)}&backgroundColor=b6e3f4,c0aede,d1d4f9`;
-        setEditForm({ ...editForm, avatar_url: url });
+    const [isGeneratingAvatar, setIsGeneratingAvatar] = useState(false);
+
+    const generateAvatar = async () => {
+        setIsGeneratingAvatar(true);
+        const seed = editForm.avatar_prompt || editForm.username || "Cannabis Connoisseur";
+        // Call Gemini Imagen (Nano Banana Style)
+        const imageUrl = await generateImage(seed);
+        setEditForm({ ...editForm, avatar_url: imageUrl });
+        setIsGeneratingAvatar(false);
     };
 
     const handleSponsorship = async (tier) => {
@@ -221,8 +227,9 @@ const UserProfile = ({ user, onLogout }) => {
                                     onClick={generateAvatar}
                                     className="p-3 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-lg hover:bg-emerald-500/20 transition-colors"
                                     title="Generate New Avatar"
+                                    disabled={isGeneratingAvatar}
                                 >
-                                    <Sparkles className="w-5 h-5" />
+                                    {isGeneratingAvatar ? <Loader2 className="w-5 h-5 animate-spin" /> : <Sparkles className="w-5 h-5" />}
                                 </button>
                             </div>
                             <p className="text-[10px] text-slate-500">Enter a prompt and click sparkles to generate a unique avatar.</p>
