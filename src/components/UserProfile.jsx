@@ -64,12 +64,6 @@ const UserProfile = ({ user, onLogout }) => {
         fetchData();
     }, [user, activeTab]);
 
-    const togglePublicProfile = async () => {
-        if (!profile) return;
-        const newValue = !profile.is_public;
-        setProfile({ ...profile, is_public: newValue });
-        await supabase.from('profiles').update({ is_public: newValue }).eq('id', user.id);
-    };
 
     const handleSaveProfile = async () => {
         // Prepare the payload
@@ -97,15 +91,6 @@ const UserProfile = ({ user, onLogout }) => {
 
     const [isGeneratingAvatar, setIsGeneratingAvatar] = useState(false);
 
-    const generateAvatar = async () => {
-        setIsGeneratingAvatar(true);
-        const seed = editForm.avatar_prompt || editForm.username || "Cannabis Connoisseur";
-        // Call Gemini Imagen (Nano Banana Style)
-        const imageUrl = await generateImage(seed);
-        setEditForm({ ...editForm, avatar_url: imageUrl });
-        setIsGeneratingAvatar(false);
-    };
-
     const handleSponsorship = async (tier) => {
         alert(`Initiating ${tier} sponsorship flow... (Demo)`);
         // In real app, trigger Stripe/Payment here
@@ -115,6 +100,68 @@ const UserProfile = ({ user, onLogout }) => {
         };
         setProfile({ ...profile, ...updates });
         await supabase.from('profiles').update(updates).eq('id', user.id);
+    };
+
+    // Avatar Upload Handler
+    const handleAvatarUpload = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        // Validation
+        if (file.size > 2 * 1024 * 1024) { // 2MB limit
+            alert("File size too large. Please upload an image under 2MB.");
+            return;
+        }
+        if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
+            alert("Invalid file type. Please upload a JPG, PNG, or WebP image.");
+            return;
+        }
+
+        try {
+            setIsGeneratingAvatar(true); // Re-use spinner state
+            const fileExt = file.name.split('.').pop();
+            const fileName = `${user.id}-${Date.now()}.${fileExt}`;
+            const filePath = `${fileName}`;
+
+            // 1. Upload to Supabase Storage
+            const { error: uploadError } = await supabase.storage
+                .from('avatars')
+                .upload(filePath, file);
+
+            if (uploadError) {
+                throw uploadError;
+            }
+
+            // 2. Get Public URL
+            const { data: { publicUrl } } = supabase.storage
+                .from('avatars')
+                .getPublicUrl(filePath);
+
+            // 3. Update State & DB
+            setEditForm(prev => ({ ...prev, avatar_url: publicUrl }));
+
+        } catch (error) {
+            console.error("Avatar Upload Error:", error);
+            alert("Failed to upload image. (Ensure 'avatars' bucket exists in Supabase)");
+        } finally {
+            setIsGeneratingAvatar(false);
+        }
+    };
+
+    const togglePublicProfile = async () => {
+        if (!profile) return;
+        const newValue = !profile.is_public;
+        setProfile({ ...profile, is_public: newValue });
+        await supabase.from('profiles').update({ is_public: newValue }).eq('id', user.id);
+    };
+
+    const generateAvatar = async () => {
+        setIsGeneratingAvatar(true);
+        const seed = editForm.avatar_prompt || editForm.username || "Cannabis Connoisseur";
+        // Call Gemini Imagen (Nano Banana Style)
+        const imageUrl = await generateImage(seed);
+        setEditForm({ ...editForm, avatar_url: imageUrl });
+        setIsGeneratingAvatar(false);
     };
 
     const handleLogout = async () => {
@@ -132,90 +179,139 @@ const UserProfile = ({ user, onLogout }) => {
                 <div className="absolute top-0 right-0 w-64 h-64 bg-emerald-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
 
                 <div className="flex items-center gap-6 relative z-10">
-                    <div className="relative">
-                        {profile?.avatar_url ? (
-                            <img src={profile.avatar_url} alt="Profile" className="w-24 h-24 rounded-full object-cover border-2 border-emerald-500/30 shadow-lg shadow-emerald-500/20" />
-                        ) : (
-                            <div className="w-24 h-24 bg-emerald-500 rounded-full flex items-center justify-center text-slate-950 text-4xl font-bold shadow-lg shadow-emerald-500/20">
-                                {user.email[0].toUpperCase()}
-                            </div>
-                        )}
-                        {profile?.account_type && profile.account_type !== 'user' && (
-                            <div className="absolute -bottom-2 -right-2 bg-amber-400 text-slate-950 text-[10px] font-bold px-2 py-1 rounded-full border border-slate-900 shadow-sm flex items-center gap-1">
-                                <ShieldCheck className="w-3 h-3" />
-                                {profile.account_type === 'small_business' ? 'PARTNER' : 'SPONSOR'}
+                    <div className="relative group">
+                        {/* Avatar Image */}
+                        <div className="w-24 h-24 rounded-full overflow-hidden border-2 border-emerald-500/30 shadow-[0_0_20px_rgba(16,185,129,0.2)] relative z-10 bg-slate-800">
+                            {isEditing ? (
+                                editForm.avatar_url ? (
+                                    <img src={editForm.avatar_url} alt="Profile" className="w-full h-full object-cover" />
+                                ) : (
+                                    <div className="w-full h-full flex items-center justify-center bg-slate-800 text-slate-500">
+                                        <User className="w-8 h-8" />
+                                    </div>
+                                )
+                            ) : (
+                                profile?.avatar_url ? (
+                                    <img src={profile.avatar_url} alt={profile.username} className="w-full h-full object-cover" />
+                                ) : (
+                                    <div className="w-full h-full flex items-center justify-center bg-slate-800 text-slate-500">
+                                        <User className="w-8 h-8" />
+                                    </div>
+                                )
+                            )}
+
+                            {/* Loading Overlay */}
+                            {isGeneratingAvatar && (
+                                <div className="absolute inset-0 bg-slate-900/80 flex items-center justify-center z-20">
+                                    <Loader2 className="w-6 h-6 animate-spin text-emerald-400" />
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Rank Badge */}
+                        <div className="absolute -bottom-2 -right-2 z-20 bg-slate-900 rounded-full p-1 border border-slate-700">
+                            {/* Rank logic placeholder if needed */}
+                        </div>
+
+                        {/* Edit Mode: Upload/Generate Buttons */}
+                        {isEditing && (
+                            <div className="absolute -bottom-12 left-1/2 -translate-x-1/2 flex flex-col gap-2 w-max z-30 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-900/90 p-2 rounded-lg border border-white/10 shadow-xl backdrop-blur-md">
+                                <label className="flex items-center gap-2 text-xs text-slate-300 hover:text-white cursor-pointer px-2 py-1 hover:bg-white/5 rounded">
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        className="hidden"
+                                        onChange={handleAvatarUpload}
+                                    />
+                                    <Upload className="w-3 h-3" /> Upload Photo
+                                </label>
+                                <button
+                                    type="button"
+                                    onClick={generateAvatar}
+                                    className="flex items-center gap-2 text-xs text-emerald-400 hover:text-emerald-300 px-2 py-1 hover:bg-emerald-500/10 rounded"
+                                >
+                                    <Sparkles className="w-3 h-3" /> AI Generate
+                                </button>
                             </div>
                         )}
                     </div>
 
                     <div>
-                        <div className="flex items-center gap-3 mb-1">
-                            <h2 className="text-3xl font-bold text-white">
-                                {isEditing ? 'Editing Profile' : 'My Profile'}
-                            </h2>
-                            {!isEditing && (
-                                <div className="flex items-center gap-2">
-                                    <button onClick={() => setIsEditing(true)} className="p-1.5 text-slate-400 hover:text-emerald-400 transition-colors bg-white/5 rounded-lg">
-                                        <Edit2 className="w-4 h-4" />
-                                    </button>
-                                    {/* Rank Badge */}
-                                    {profile?.rank && (
-                                        <div className="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-2" title={`Current XP: ${profile.xp || 0}`}>
-                                            <span className="text-xl">{RANKS.find(r => r.name === profile.rank)?.icon || '🌱'}</span>
-                                            <span className="text-sm font-bold text-emerald-400 uppercase tracking-wide">{profile.rank}</span>
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-                        </div>
-                        <p className="text-slate-400 text-lg">{user.email}</p>
-
-                        {!isEditing && profile && (
-                            <div className="mt-4 w-full max-w-xs">
-                                <div className="flex justify-between text-xs text-slate-500 mb-1 font-bold uppercase tracking-wider">
-                                    <span>XP Progress</span>
-                                    <span>{profile.xp || 0} / {RANKS.find(r => (profile.xp || 0) < r.minXP)?.minXP || 'MAX'}</span>
-                                </div>
-                                <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
-                                    <div
-                                        className="h-full bg-emerald-500"
-                                        style={{ width: `${Math.min(100, ((profile.xp || 0) / (RANKS.find(r => (profile.xp || 0) < r.minXP)?.minXP || 5000)) * 100)}%` }}
-                                    />
-                                </div>
+                        {isEditing ? (
+                            <div className="space-y-3">
+                                <input
+                                    type="text"
+                                    value={editForm.username}
+                                    onChange={(e) => setEditForm({ ...editForm, username: e.target.value })}
+                                    className="bg-slate-800/50 border border-slate-700 rounded px-3 py-1 text-lg font-bold text-white w-full focus:border-emerald-500 outline-none"
+                                    placeholder="Username"
+                                />
+                                <input
+                                    type="text"
+                                    value={editForm.bio}
+                                    onChange={(e) => setEditForm({ ...editForm, bio: e.target.value })}
+                                    className="bg-slate-800/50 border border-slate-700 rounded px-3 py-1 text-sm text-slate-300 w-full focus:border-emerald-500 outline-none"
+                                    placeholder="Short bio..."
+                                />
+                                <input
+                                    type="text"
+                                    value={editForm.avatar_prompt}
+                                    onChange={(e) => setEditForm({ ...editForm, avatar_prompt: e.target.value })}
+                                    className="bg-slate-800/50 border border-slate-700 rounded px-3 py-1 text-xs text-slate-400 w-full focus:border-emerald-500 outline-none"
+                                    placeholder="AI Avatar Prompt (e.g. 'Cyberpunk Wizard')"
+                                />
                             </div>
+                        ) : (
+                            <>
+                                <h1 className="text-3xl font-bold text-white mb-2 flex items-center gap-3">
+                                    {profile?.username || 'Loading...'}
+                                    {profile?.is_public ? (
+                                        <span className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2 py-0.5 rounded-full flex items-center gap-1">
+                                            <Globe className="w-3 h-3" /> Public
+                                        </span>
+                                    ) : (
+                                        <span className="text-[10px] bg-slate-700/50 text-slate-400 border border-slate-700 px-2 py-0.5 rounded-full flex items-center gap-1">
+                                            <Lock className="w-3 h-3" /> Private
+                                        </span>
+                                    )}
+                                </h1>
+                                <p className="text-slate-400 max-w-lg">{profile?.bio || 'No bio yet.'}</p>
+                            </>
                         )}
-
-                        {!isEditing && profile?.bio && (
-                            <p className="text-slate-300 mt-2 text-sm max-w-md italic">"{profile.bio}"</p>
-                        )}
-
-                        <div className="flex items-center gap-2 mt-3">
-                            <span className={`w-2 h-2 rounded-full ${profile?.is_public ? 'bg-emerald-400' : 'bg-slate-500'}`} />
-                            <span className="text-xs text-slate-500 uppercase tracking-wider">
-                                {profile?.is_public ? 'Public Profile' : 'Private Profile'}
-                            </span>
-                        </div>
                     </div>
                 </div>
 
-                <div className="flex flex-col items-end gap-3 relative z-10">
-                    <div className="flex gap-3">
-                        <button
-                            onClick={togglePublicProfile}
-                            className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-colors border ${profile?.is_public
-                                ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20'
-                                : 'bg-slate-800 text-slate-400 border-slate-700 hover:text-white'
-                                }`}
-                        >
-                            {profile?.is_public ? <Globe className="w-4 h-4" /> : <Lock className="w-4 h-4" />}
-                            {profile?.is_public ? 'Public' : 'Private'}
-                        </button>
+                <div className="flex flex-col items-end gap-3 z-10">
+                    <div className="flex gap-2">
+                        {isEditing ? (
+                            <>
+                                <button
+                                    onClick={() => setIsEditing(false)}
+                                    className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-slate-400 hover:text-white hover:bg-white/5 transition-all"
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleSaveProfile}
+                                    className="flex items-center gap-2 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-slate-950 rounded-lg text-sm font-bold transition-all shadow-lg shadow-emerald-500/20"
+                                >
+                                    <Save className="w-4 h-4" /> Save Changes
+                                </button>
+                            </>
+                        ) : (
+                            <button
+                                onClick={() => setIsEditing(true)}
+                                className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-lg text-sm font-medium transition-all border border-slate-700"
+                            >
+                                <Edit2 className="w-4 h-4" /> Edit Profile
+                            </button>
+                        )}
                         <button
                             onClick={handleLogout}
-                            className="flex items-center gap-2 px-4 py-2 bg-red-500/10 text-red-400 hover:bg-red-500/20 rounded-lg transition-colors border border-red-500/20"
+                            className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-500/10 rounded-lg transition-all"
+                            title="Log Out"
                         >
-                            <LogOut className="w-4 h-4" />
-                            Sign Out
+                            <LogOut className="w-5 h-5" />
                         </button>
                     </div>
                 </div>

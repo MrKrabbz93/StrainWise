@@ -10,6 +10,6 @@ export const getStrainImageUrl = (strain) => {
     };
 
     const imageId = visualProfiles[strain.visual_profile] || visualProfiles.default;
-    // Unsplash Source URL (Optimized)
-    return `https://images.unsplash.com/photo-${imageId}?auto=format&fit=crop&w=800&q=80`;
+    // Unsplash Source URL (High Quality Optimized)
+    return `https://images.unsplash.com/photo-${imageId}?auto=format&fit=crop&w=1200&q=90`;
 };

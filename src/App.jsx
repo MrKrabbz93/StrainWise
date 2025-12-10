@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Layout from './components/Layout';
 import ConsultantInterface from './components/ConsultantInterface';
@@ -13,7 +13,6 @@ import SettingsModal from './components/SettingsModal';
 import TutorialOverlay from './components/TutorialOverlay';
 import { supabase } from './lib/supabase';
 import strainsData from './data/strains.json';
-import dispensariesData from './data/dispensaries.json';
 
 function App() {
   const [activeTab, setActiveTab] = useState('consult');
@@ -24,6 +23,23 @@ function App() {
   const [showTutorial, setShowTutorial] = useState(false);
   const [user, setUser] = useState(null);
   const [hasEntered, setHasEntered] = useState(false);
+  const [dispensaries, setDispensaries] = useState([]);
+
+  useEffect(() => {
+    const fetchDispensaries = async () => {
+      try {
+        const { data, error } = await supabase.from('dispensaries').select('*');
+        if (error) {
+          console.error('Error fetching dispensaries:', error);
+          return;
+        }
+        if (data) setDispensaries(data);
+      } catch (err) {
+        console.error('Unexpected error fetching dispensaries:', err);
+      }
+    };
+    fetchDispensaries();
+  }, []);
 
   const [userLocation, setUserLocation] = useState(null);
 
@@ -66,7 +82,7 @@ function App() {
       case 'strains':
         return <StrainLibrary />;
       case 'dispensaries':
-        return <DispensaryList dispensaries={dispensariesData} userLocation={userLocation} />;
+        return <DispensaryList dispensaries={dispensaries} userLocation={userLocation} />;
       case 'consult':
       default:
         return (
@@ -122,7 +138,7 @@ function App() {
                       >
                         <StrainCard
                           strain={strain}
-                          dispensaries={dispensariesData}
+                          dispensaries={dispensaries}
                           userLocation={userLocation}
                         />
                       </motion.div>
