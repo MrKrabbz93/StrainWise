@@ -6,6 +6,7 @@ import { supabase } from '../lib/supabase';
 import strainsData from '../data/strains.json';
 import dispensariesData from '../data/dispensaries.json';
 import DispensaryMap from './DispensaryMap';
+import { getStrainImageUrl } from '../lib/images';
 
 // CSS Visual Profiles (Fallback for Image Generation Failure)
 const visualProfiles = {
@@ -200,13 +201,14 @@ const StrainLibrary = () => {
                         exit={{ opacity: 0, y: -20 }}
                         className="bg-slate-900/80 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden shadow-2xl relative"
                     >
-                        {/* Visual Profile Header (CSS Gradient) */}
-                        <div className={`h-64 w-full relative overflow-hidden ${visualProfiles[strainData.visual_profile] || visualProfiles.green_sativa}`}>
-                            <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10 mix-blend-overlay" />
-                            <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-transparent to-transparent z-10" />
-
-                            {/* Abstract Visual Elements */}
-                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 bg-white/5 rounded-full blur-3xl animate-pulse" />
+                        {/* Visual Profile Header (Dynamic Image) */}
+                        <div className="h-64 w-full relative overflow-hidden">
+                            <img
+                                src={getStrainImageUrl(strainData)}
+                                alt={strainData.name}
+                                className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 hover:scale-105"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/40 to-transparent z-10" />
 
                             <div className="absolute top-6 right-6 z-30 flex gap-3">
                                 <button

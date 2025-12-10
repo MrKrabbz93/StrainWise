@@ -3,6 +3,7 @@ import { Activity, Droplet, Brain, MapPin, Sparkles, Share2, X, Star, User } fro
 import { generateCustomerReviews } from '../lib/gemini';
 import { motion, AnimatePresence } from 'framer-motion';
 import DispensaryMap from './DispensaryMap';
+import { getStrainImageUrl } from '../lib/images';
 
 const StrainCard = ({ strain, dispensaries, userLocation }) => {
     const [reviews, setReviews] = useState([]);
@@ -33,6 +34,15 @@ const StrainCard = ({ strain, dispensaries, userLocation }) => {
             >
                 {/* Glow Effect */}
                 <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+
+                <div className="h-32 w-full relative overflow-hidden">
+                    <img
+                        src={getStrainImageUrl(strain)}
+                        alt={strain.name}
+                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/20 to-transparent" />
+                </div>
 
                 <div className="p-6 relative z-10">
                     <div className="flex justify-between items-start mb-4">
