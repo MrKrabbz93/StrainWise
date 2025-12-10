@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MessageSquare, ArrowRight, Loader2, Sparkles, Bot } from 'lucide-react';
+import { MessageSquare, ArrowRight, Loader2, Sparkles, Bot, User } from 'lucide-react';
 import { generateResponse, isAIEnabled } from '../lib/gemini';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -87,18 +87,32 @@ const ConsultantInterface = ({ onRecommend, userLocation }) => {
       >
         <AnimatePresence initial={false}>
           {messages.map((msg, idx) => (
-            /* ... message items ... */
             <motion.div
               key={idx}
-            /* ... */
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}
             >
-              {/* ... */}
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${msg.role === 'user' ? 'bg-emerald-500 text-slate-950' : 'bg-slate-700 text-emerald-400'}`}>
+                {msg.role === 'user' ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
+              </div>
+              <div className={`max-w-[80%] p-3 rounded-2xl text-sm leading-relaxed ${msg.role === 'user' ? 'bg-emerald-500/10 text-emerald-100 border border-emerald-500/20 rounded-tr-none' : 'bg-slate-800 text-slate-300 border border-slate-700 rounded-tl-none'}`}>
+                {typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content)}
+              </div>
             </motion.div>
           ))}
         </AnimatePresence>
 
         {isLoading && (
-          {/* ... loading indicator ... */ }
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex gap-3">
+            <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center shrink-0 text-emerald-400">
+              <Bot className="w-4 h-4" />
+            </div>
+            <div className="bg-slate-800 border border-slate-700 rounded-2xl rounded-tl-none p-3 flex items-center gap-2">
+              <Loader2 className="w-4 h-4 animate-spin text-emerald-500" />
+              <span className="text-xs text-slate-400">Consulting strain database...</span>
+            </div>
+          </motion.div>
         )}
       </div>
 
