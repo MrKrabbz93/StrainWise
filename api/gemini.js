@@ -27,67 +27,55 @@ export default async function handler(req, res) {
     }
 
     try {
-        let validHistory = history.map(msg => ({
-            role: msg.role === 'assistant' ? 'model' : 'user',
-            parts: [{ text: msg.content }],
-        }));
+        const genAI = new GoogleGenerativeAI(apiKey);
+        let model = genAI.getGenerativeModel({ model: "gemini-3.0-pro" });
 
-        // Remove leading model messages until we find a user message
-        while (validHistory.length > 0 && validHistory[0].role === 'model') {
-            validHistory.shift();
-        }
+        const generate = async (selectedModel) => {
+            if (type === 'chat') {
+                // Sanitize history: Ensure it starts with 'user'
+                let validHistory = history.map(msg => ({
+                    role: msg.role === 'assistant' ? 'model' : 'user',
+                    parts: [{ text: msg.content }],
+                }));
 
-        const chat = selectedModel.startChat({
-            history: validHistory,
-            generationConfig: { maxOutputTokens: 500 },
-        });
-        const result = await chat.sendMessage(`${systemPrompt}\nUser: ${prompt}`);
-        const response = await result.response;
-        return response.text();
-    } else {
-        // Single prompt (encyclopedia, reviews, sales copy)
-        const result = await selectedModel.generateContent(prompt);
-        const response = await result.response;
-        return response.text();
-    }
-};
+                // Remove leading model messages until we find a user message
+                while (validHistory.length > 0 && validHistory[0].role === 'model') {
+                    validHistory.shift();
+                }
 
-try {
-    text = await generate(model);
-} catch (primaryError) {
-
-    const chat = selectedModel.startChat({
-        history: validHistory,
-        generationConfig: { maxOutputTokens: 500 },
-    });
-    const result = await chat.sendMessage(`${systemPrompt}\nUser: ${prompt}`);
-    const response = await result.response;
-    return response.text();
-} else {
-    // Single prompt (encyclopedia, reviews, sales copy)
-    const result = await selectedModel.generateContent(prompt);
-    const response = await result.response;
-    return response.text();
-}
+                const chat = selectedModel.startChat({
+                    history: validHistory,
+                    generationConfig: { maxOutputTokens: 500 },
+                });
+                const result = await chat.sendMessage(`${systemPrompt}\nUser: ${prompt}`);
+                const response = await result.response;
+                return response.text();
+            } else {
+                // Single prompt (encyclopedia, reviews, sales copy)
+                const result = await selectedModel.generateContent(prompt);
+                const response = await result.response;
+                return response.text();
+            }
         };
 
-try {
-    text = await generate(model);
-} catch (primaryError) {
-    console.warn("Primary model (Gemini 3.0 Pro) failed, attempting fallback to 1.5 Pro:", primaryError.message);
-    model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
-    text = await generate(model);
-}
+        let text = "";
+        try {
+            text = await generate(model);
+        } catch (primaryError) {
+            console.warn("Primary model (Gemini 3.0 Pro) failed, attempting fallback to 1.5 Pro:", primaryError.message);
+            model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+            text = await generate(model);
+        }
 
-return res.status(200).json({ text });
+        return res.status(200).json({ text });
     } catch (error) {
-    console.error("Gemini API Backend Error:", error);
-    // Extract mostly useful info from the error object
-    const errorMessage = error.response ? JSON.stringify(await error.response.json()) : error.message;
-    return res.status(500).json({
-        error: 'Failed to generate content',
-        details: errorMessage,
-        model: "gemini-3.0-pro + fallback"
-    });
-}
+        console.error("Gemini API Backend Error:", error);
+        // Extract mostly useful info from the error object
+        const errorMessage = error.response ? JSON.stringify(await error.response.json()) : error.message;
+        return res.status(500).json({
+            error: 'Failed to generate content',
+            details: errorMessage,
+            model: "gemini-3.0-pro + fallback"
+        });
+    }
 }
