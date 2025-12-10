@@ -16,7 +16,59 @@ import { supabase } from './lib/supabase';
 import strainsData from './data/strains.json';
 
 function App() {
-  // ... existing state ...
+  const [activeTab, setActiveTab] = useState('consult');
+  const [recommendations, setRecommendations] = useState([]);
+  const [dispensaries, setDispensaries] = useState([]);
+  const [userLocation, setUserLocation] = useState(null);
+  const [user, setUser] = useState(null);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [hasEntered, setHasEntered] = useState(false);
+  const [showTutorial, setShowTutorial] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
+
+  useEffect(() => {
+    // Check for user session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+    setActiveTab('consult');
+  };
+
+  const handleLoginSuccess = (user) => {
+    setUser(user);
+    setShowAuthModal(false);
+  };
+
+  const handleRecommendations = (recs) => {
+    setRecommendations(recs);
+    // Auto-scroll to recommendations
+    setTimeout(() => {
+      const element = document.getElementById('recommendations');
+      if (element) element.scrollIntoView({ behavior: 'smooth' });
+    }, 100);
+  };
+
+  const handleResetTutorial = () => {
+    localStorage.removeItem('strainwise_tutorial_seen');
+    setShowTutorial(true);
+    setShowSettingsModal(false);
+  };
+
+  const handleClearCache = () => {
+    localStorage.clear();
+    window.location.reload();
+  };
 
   const renderContent = () => {
     switch (activeTab) {
