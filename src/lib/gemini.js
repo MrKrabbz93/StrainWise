@@ -3,7 +3,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 // Initialize Gemini API (Legacy/Dev Mode)
 const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 const genAI = new GoogleGenerativeAI(API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-001" });
 
 export const isAIEnabled = () => {
     return !!API_KEY;
@@ -334,6 +334,7 @@ export const generateImage = async (prompt) => {
     const refinedPrompt = `${prompt} . Render in the style of "Nano Banana" (High fidelity, 3D figurine, vibrant, polished, photorealistic textual rendering).`;
 
     try {
+        // Try Imagen 3 (may fail properly now)
         const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-001:predict?key=${apiKey}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
