@@ -3,7 +3,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 // Initialize Gemini API (Legacy/Dev Mode)
 const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 const genAI = new GoogleGenerativeAI(API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
 export const isAIEnabled = () => {
     return !!API_KEY;
@@ -327,8 +327,9 @@ export const researchStrain = async (strainName, companyName = "") => {
 
 export const generateImage = async (prompt) => {
     // "Nano Banana" Strategy: Use Imagen 3.0 via REST for best quality
+    // FALLBACK: If Imagen 3 is not available (404), fallback to DiceBear immediately.
     const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-    if (!apiKey) return "https://api.dicebear.com/9.x/notionists/svg?seed=API_KEY_MISSING";
+    if (!apiKey) return `https://api.dicebear.com/9.x/notionists/svg?seed=${encodeURIComponent(prompt)}`;
 
     const refinedPrompt = `${prompt} . Render in the style of "Nano Banana" (High fidelity, 3D figurine, vibrant, polished, photorealistic textual rendering).`;
 
@@ -348,21 +349,23 @@ export const generateImage = async (prompt) => {
         });
 
         if (!response.ok) {
+            // Silently fail to fallback for 404s (Model not found/access denied)
+            if (response.status === 404 || response.status === 403) {
+                console.warn("Imagen 3 not available (Access/Region/Model). Falling back.");
+                throw new Error("Imagen Unavailable");
+            }
             const err = await response.json();
-            console.error("Imagen API Error:", err);
             throw new Error(err.error?.message || "Image Gen Failed");
         }
 
         const data = await response.json();
-        // Imagen returns base64 string
         const b64 = data.predictions?.[0]?.bytesBase64Encoded;
         if (b64) {
             return `data:image/jpeg;base64,${b64}`;
         }
-        return "https://api.dicebear.com/9.x/notionists/svg?seed=Error_Gen";
+        throw new Error("No image data returned");
     } catch (error) {
-        console.error("Generate Image Error:", error);
-        // Fallback to DiceBear if API fails (e.g., quota, not available in region)
+        console.warn("Generate Image Fallback:", error.message);
         return `https://api.dicebear.com/9.x/notionists/svg?seed=${encodeURIComponent(prompt)}`;
     }
 };

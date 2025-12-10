@@ -21,7 +21,7 @@
             "headers": [
                 {
                     "key": "Content-Security-Policy",
-                    "value": "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https: https://vercel.live; style-src 'self' 'unsafe-inline' https:; img-src 'self' https: data: blob:; font-src 'self' https: data:; connect-src 'self' https: wss:; frame-src 'self' https: https://vercel.live;"
+                    "value": "default-src 'self'; script-src 'self' 'unsafe-eval' 'unsafe-inline' https: blob: https://vercel.live; style-src 'self' 'unsafe-inline' https:; img-src 'self' https: data: blob:boxicons.com; font-src 'self' https: data:; connect-src 'self' https: wss:; frame-src 'self' https: https://vercel.live;"
                 }
             ]
         }
