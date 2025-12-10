@@ -79,7 +79,6 @@ const callGemini = async (payload) => {
             const response = await result.response;
             return response.text();
         } else {
-            // For single generation (research mode)
             const result = await currentModel.generateContent({
                 contents: [{ role: 'user', parts: [{ text: payload.prompt }] }],
                 tools: requestTools,
@@ -95,6 +94,41 @@ const callGemini = async (payload) => {
     } catch (err) {
         console.error("Gemini API Error:", err);
         return `Error: ${err.message || "Unknown API Failure"}`;
+    }
+};
+
+export const identifyStrain = async (base64Image) => {
+    // base64Image should be the pure base64 string (without data:image/jpeg;base64, prefix if using inlineData, but the SDK usually wants the parts formatted correctly)
+    // Actually SDK 'inlineData' wants just the base64 string.
+
+    // Clean header if present
+    const cleanBase64 = base64Image.replace(/^data:image\/(png|jpeg|jpg|webp);base64,/, "");
+
+    const prompt = `Look at this cannabis bud/plant. 
+    1. Analyze its visual characteristics (color, structure, trichome density, pistil color).
+    2. Based on these traits, IDENTIFY the most likely strain (or top 3 candidates).
+    3. Estimate if it looks Indica, Sativa, or Hybrid.
+    4. Comment on its apparent quality/health.
+    
+    Format response as a friendly chat message describing what you see.`;
+
+    try {
+        if (!model) return "AI Model not initialized.";
+
+        const result = await model.generateContent([
+            prompt,
+            {
+                inlineData: {
+                    data: cleanBase64,
+                    mimeType: "image/jpeg"
+                }
+            }
+        ]);
+        const response = await result.response;
+        return response.text();
+    } catch (error) {
+        console.error("Vision Error:", error);
+        return "Sorry, I couldn't analyze that image. Please try another.";
     }
 };
 
@@ -362,6 +396,32 @@ export const researchStrain = async (strainName, companyName = "") => {
     } catch (error) {
         console.error("Research Agent failed:", error);
         return null;
+    }
+};
+
+export const getPersonalizedRecommendation = async (userHistory) => {
+    // userHistory: { favorites: ['Blue Dream', 'GSC'], reviews: [{strain:'OG Kush', rating:5, notes:'Love it'}] }
+
+    const prompt = `Act as a "Cannabis Sommelier" AI.
+    
+    User Taste Profile:
+    - Favorites: ${userHistory.favorites.join(', ') || "None yet"}
+    - Recent Reviews: ${userHistory.reviews.map(r => `${r.strain} (${r.rating}/5 stars): ${r.notes}`).join('; ') || "None yet"}
+    
+    Task:
+    Recommend 3 DISTINCT strains that fit this specific taste profile but offer a new experience.
+    Avoid strains already listed above.
+    For each, provide a "Sommelier's Note" explaining WHY it was chosen based on their history (e.g., "Since you liked Blue Dream's berry notes...").
+    
+    Format: JSON Array of objects: [{ "name": "Strain Name", "reason": "Sommelier's Note", "type": "Sativa/Indica/Hybrid" }]`;
+
+    try {
+        const text = await callGemini({ type: 'generate', prompt });
+        const jsonStr = text.replace(/```json/g, '').replace(/```/g, '').trim();
+        return JSON.parse(jsonStr);
+    } catch (e) {
+        console.error("Sommelier Error:", e);
+        return null; // Handle UI error
     }
 };
 

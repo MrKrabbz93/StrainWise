@@ -9,6 +9,7 @@ import DispensaryMap from './DispensaryMap';
 import { getStrainImageUrl } from '../lib/images';
 import { researchStrain, generateImage } from '../lib/gemini';
 import { addXP, postStrainShoutout } from '../lib/gamification';
+import StrainReviews from './StrainReviews';
 
 // CSS Visual Profiles (Fallback for Image Generation Failure)
 const visualProfiles = {
@@ -466,6 +467,12 @@ const StrainLibrary = () => {
                                 </div>
                             </div>
                         </div>
+
+
+                        {/* Reviews Section Integration */}
+                        <div className="px-8 pb-8">
+                            <StrainReviews strainName={strainData.name} />
+                        </div>
                     </motion.div>
                 )}
             </AnimatePresence>
@@ -500,7 +507,7 @@ const StrainLibrary = () => {
                     </motion.div>
                 )}
             </AnimatePresence>
-        </div>
+        </div >
     );
 };
 

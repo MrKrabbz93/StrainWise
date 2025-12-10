@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">StrainWise</string>
+    <string name="title_activity_main">StrainWise</string>
+    <string name="package_name">com.strainwise.app</string>
+    <string name="custom_url_scheme">com.strainwise.app</string>
+</resources>

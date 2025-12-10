@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { MessageSquare, ArrowRight, Loader2, Sparkles, Bot, User } from 'lucide-react';
-import { generateResponse, isAIEnabled } from '../lib/gemini';
+import { MessageSquare, ArrowRight, Loader2, Sparkles, Bot, User, Camera } from 'lucide-react';
+import { generateResponse, isAIEnabled, identifyStrain } from '../lib/gemini';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const PERSONAS = [
@@ -20,6 +20,7 @@ const ConsultantInterface = ({ onRecommend, userLocation }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [persona, setPersona] = useState('helpful');
   const messagesContainerRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   const scrollToBottom = () => {
     if (messagesContainerRef.current) {
@@ -29,6 +30,35 @@ const ConsultantInterface = ({ onRecommend, userLocation }) => {
         behavior: 'smooth'
       });
     }
+  };
+
+  const handleImageUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    setIsLoading(true);
+    setMessages(prev => [...prev, { role: 'user', content: `[Uploaded Image: ${file.name}]` }]);
+
+    const reader = new FileReader();
+    reader.onloadend = async () => {
+      const base64 = reader.result;
+      setMessages(prev => [...prev, { role: 'assistant', content: "👀 Analyzing image..." }]);
+
+      try {
+        const analysis = await identifyStrain(base64);
+        setMessages(prev => {
+          const newHistory = [...prev];
+          newHistory.pop(); // Remove "Analyzing..."
+          return [...newHistory, { role: 'assistant', content: analysis }];
+        });
+      } catch (err) {
+        console.error(err);
+        setMessages(prev => [...prev, { role: 'assistant', content: "Failed to analyze image." }]);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    reader.readAsDataURL(file);
   };
 
   useEffect(() => {
@@ -185,7 +215,22 @@ const ConsultantInterface = ({ onRecommend, userLocation }) => {
         )}
       </div>
 
-      <div className="relative mt-auto z-10">
+      <div className="relative mt-auto z-10 flex gap-2">
+        <input
+          type="file"
+          accept="image/*"
+          className="hidden"
+          ref={fileInputRef}
+          onChange={handleImageUpload}
+        />
+        <button
+          onClick={() => fileInputRef.current?.click()}
+          disabled={isLoading}
+          className="p-4 bg-slate-800 border border-white/10 text-slate-400 hover:text-emerald-400 hover:border-emerald-500/50 rounded-xl transition-all"
+        >
+          <Camera className="w-5 h-5" />
+        </button>
+
         <input
           type="text"
           value={input}
