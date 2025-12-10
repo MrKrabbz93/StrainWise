@@ -20,7 +20,8 @@ export default async function handler(req, res) {
     }
 
     const { prompt, type, history = [], systemPrompt } = req.body;
-    const apiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
+    let apiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
+    if (apiKey) apiKey = apiKey.trim();
 
     console.log("Server Debug - API Key Check:", {
         exists: !!apiKey,
@@ -28,54 +29,48 @@ export default async function handler(req, res) {
         snippet: apiKey ? `${apiKey.slice(0, 4)}...` : "MISSING"
     });
 
+    if (type === 'health') {
+        return res.status(200).json({
+            status: 'online',
+            serverLocation: process.env.VERCEL_REGION || 'unknown',
+            keyConfigured: !!apiKey,
+            keyLength: apiKey ? apiKey.length : 0
+        });
+    }
+
     if (!apiKey) {
         return res.status(500).json({ error: 'Server configuration error: Missing API Key' });
     }
 
     try {
         const genAI = new GoogleGenerativeAI(apiKey);
-        let model = genAI.getGenerativeModel({ model: "gemini-3.0-pro" });
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-        const generate = async (selectedModel) => {
-            if (type === 'chat') {
-                // Sanitize history: Ensure it starts with 'user'
-                let validHistory = history.map(msg => ({
-                    role: msg.role === 'assistant' ? 'model' : 'user',
-                    parts: [{ text: msg.content }],
-                }));
+        let text = "";
 
-                // Remove leading model messages until we find a user message
-                while (validHistory.length > 0 && validHistory[0].role === 'model') {
-                    validHistory.shift();
-                }
+        if (type === 'chat') {
+            // Sanitize history: Ensure it starts with 'user'
+            let validHistory = history.map(msg => ({
+                role: msg.role === 'assistant' ? 'model' : 'user',
+                parts: [{ text: msg.content }],
+            }));
 
-                const chat = selectedModel.startChat({
-                    history: validHistory,
-                    generationConfig: { maxOutputTokens: 500 },
-                });
-                const result = await chat.sendMessage(`${systemPrompt}\nUser: ${prompt}`);
-                const response = await result.response;
-                return response.text();
-            } else {
-                // Single prompt (encyclopedia, reviews, sales copy)
-                const result = await selectedModel.generateContent(prompt);
-                const response = await result.response;
-                return response.text();
+            // Remove leading model messages until we find a user message
+            while (validHistory.length > 0 && validHistory[0].role === 'model') {
+                validHistory.shift();
             }
-        };
 
-        try {
-            text = await generate(model);
-        } catch (primaryError) {
-            console.warn("Primary model (Gemini 3.0 Pro) failed, attempting fallback to 1.5 Pro:", primaryError.message);
-            try {
-                model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
-                text = await generate(model);
-            } catch (secondaryError) {
-                console.warn("Secondary model (Gemini 1.5 Pro) failed, attempting safety net (1.5 Flash):", secondaryError.message);
-                model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-                text = await generate(model);
-            }
+            const chat = model.startChat({
+                history: validHistory,
+                generationConfig: { maxOutputTokens: 500 },
+            });
+            const result = await chat.sendMessage(`${systemPrompt}\nUser: ${prompt}`);
+            const response = await result.response;
+            text = response.text();
+        } else {
+            const result = await model.generateContent(prompt);
+            const response = await result.response;
+            text = response.text();
         }
 
         return res.status(200).json({ text });

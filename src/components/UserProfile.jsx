@@ -568,12 +568,30 @@ const UserProfile = ({ user, onLogout }) => {
                                             <div className="text-xs text-slate-500">{import.meta.env.VITE_GEMINI_API_KEY ? 'API Key Present' : 'Missing VITE_GEMINI_API_KEY'}</div>
                                         </div>
                                     </div>
-                                    <span className="text-xs font-mono bg-slate-900 px-2 py-1 rounded text-slate-400">gemini-3.0-pro</span>
+                                    <span className="text-xs font-mono bg-slate-900 px-2 py-1 rounded text-slate-400">gemini-1.5-flash</span>
                                 </div>
 
-                                <div className="p-4 bg-emerald-500/5 text-emerald-400 text-xs rounded-lg border border-emerald-500/10">
+                                <div className="p-4 bg-emerald-500/5 text-emerald-400 text-xs rounded-lg border border-emerald-500/10 mb-4">
                                     ℹ️ <strong>Environment Check:</strong> If status is yellow/red, check Vercel Project Settings &gt; Environment Variables. Redeploy after changes.
                                 </div>
+                                <button
+                                    onClick={async () => {
+                                        try {
+                                            const res = await fetch('/api/gemini', {
+                                                method: 'POST',
+                                                headers: { 'Content-Type': 'application/json' },
+                                                body: JSON.stringify({ type: 'health' })
+                                            });
+                                            const data = await res.json();
+                                            alert(`Server Diagnostics:\nTime: ${new Date().toLocaleTimeString()}\nStatus: ${data.status}\nKey Configured: ${data.keyConfigured}\nKey Length: ${data.keyLength}\nRegion: ${data.serverLocation}`);
+                                        } catch (e) {
+                                            alert("Connection Failed: " + e.message);
+                                        }
+                                    }}
+                                    className="w-full py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-lg text-sm font-medium transition-colors border border-slate-700"
+                                >
+                                    🔍 Test Server Connection
+                                </button>
                             </div>
                         </div>
                     )}
