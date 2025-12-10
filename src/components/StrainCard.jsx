@@ -123,7 +123,7 @@ const StrainCard = ({ strain, dispensaries, userLocation }) => {
                     <div className="space-y-3">
                         {/* Effects */}
                         <div className="flex flex-wrap gap-1.5">
-                            {strain.effects.slice(0, 3).map(effect => (
+                            {strain.effects?.slice(0, 3).map(effect => (
                                 <span key={effect} className="px-2.5 py-1 bg-slate-800/50 text-slate-300 rounded-md text-xs font-medium border border-white/5 flex items-center gap-1 group/chip hover:border-emerald-500/30 transition-colors">
                                     <Brain className="w-3 h-3 text-slate-500 group-hover/chip:text-emerald-400" />
                                     {effect}
