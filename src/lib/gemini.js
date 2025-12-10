@@ -81,7 +81,7 @@ const callGemini = async (payload) => {
         return await performRequest(model);
     } catch (err) {
         console.error("Gemini API Error:", err);
-        return null;
+        return `Error: ${err.message || "Unknown API Failure"}`;
     }
 };
 
@@ -100,7 +100,9 @@ export const generateResponse = async (history, userMessage, persona = "helpful"
         systemPrompt
     });
 
-    if (!response) return "⚠️ Debug: Client-side AI failed. Are you on Localhost? If so, you need a .env file. If on Vercel, the Backend failed silently.";
+    if (!response || response.startsWith("Error:")) {
+        return `⚠️ API Failure Details: ${response || "Connection dropped"}\n\nAsk the developer to check the specific error above.`;
+    }
     return response;
 };
 
