@@ -4,6 +4,11 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 const genAI = new GoogleGenerativeAI(API_KEY);
 const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+export const isAIEnabled = () => {
+    return !!API_KEY;
+};
+
 const callGemini = async (payload) => {
     // In a real scenario, we'd check import.meta.env.PROD
     // For this implementation, we try the backend first, fallback to direct if it fails (or if we are in dev and want direct)
