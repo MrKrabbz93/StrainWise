@@ -1,12 +1,16 @@
 import React from 'react';
-import { User, Map, BookOpen, Sparkles, Settings } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
+import { User, Map, BookOpen, Sparkles, Settings, PlusCircle } from 'lucide-react';
 import Background from './Background';
 
 const Layout = ({ children, activeTab, onTabChange, user, onLoginClick, onSettingsClick }) => {
+    const { t } = useTranslation();
+
     const navItems = [
-        { id: 'consult', label: 'Consult', icon: User },
-        { id: 'strains', label: 'Strains', icon: BookOpen },
-        { id: 'dispensaries', label: 'Dispensaries', icon: Map },
+        { id: 'consult', label: t('tabs.consultant'), icon: User },
+        { id: 'strains', label: t('tabs.library'), icon: BookOpen },
+        { id: 'dispensaries', label: t('tabs.dispensaries'), icon: Map },
+        { id: 'contribute', label: 'Contribute', icon: PlusCircle },
     ];
 
     return (

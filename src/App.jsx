@@ -11,69 +11,12 @@ import AuthModal from './components/AuthModal';
 import UserProfile from './components/UserProfile';
 import SettingsModal from './components/SettingsModal';
 import TutorialOverlay from './components/TutorialOverlay';
+import SubmitStrainForm from './components/SubmitStrainForm'; // Add Import
 import { supabase } from './lib/supabase';
 import strainsData from './data/strains.json';
 
 function App() {
-  const [activeTab, setActiveTab] = useState('consult');
-  const [recommendations, setRecommendations] = useState([]);
-  const [showLanding, setShowLanding] = useState(true);
-  const [showAuthModal, setShowAuthModal] = useState(false);
-  const [showSettingsModal, setShowSettingsModal] = useState(false);
-  const [showTutorial, setShowTutorial] = useState(false);
-  const [user, setUser] = useState(null);
-  const [hasEntered, setHasEntered] = useState(false);
-  const [dispensaries, setDispensaries] = useState([]);
-
-  useEffect(() => {
-    const fetchDispensaries = async () => {
-      try {
-        const { data, error } = await supabase.from('dispensaries').select('*');
-        if (error) {
-          console.error('Error fetching dispensaries:', error);
-          return;
-        }
-        if (data) setDispensaries(data);
-      } catch (err) {
-        console.error('Unexpected error fetching dispensaries:', err);
-      }
-    };
-    fetchDispensaries();
-  }, []);
-
-  const [userLocation, setUserLocation] = useState(null);
-
-  const handleRecommendations = (strainNames) => {
-    const filtered = strainsData.filter(strain => strainNames.includes(strain.name));
-    setRecommendations(filtered);
-    // Smooth scroll to recommendations
-    setTimeout(() => {
-      document.getElementById('recommendations')?.scrollIntoView({ behavior: 'smooth' });
-    }, 100);
-  };
-
-  const handleLoginSuccess = (userData) => {
-    setUser(userData);
-    setShowAuthModal(false);
-  };
-
-  const handleLogout = () => {
-    setUser(null);
-    setActiveTab('consult');
-  };
-
-  const handleResetTutorial = async () => {
-    if (user) {
-      await supabase.from('profiles').update({ tutorial_completed: false }).eq('id', user.id);
-      window.location.reload();
-    }
-  };
-
-  const handleClearCache = () => {
-    localStorage.clear();
-    sessionStorage.clear();
-    window.location.reload();
-  };
+  // ... existing state ...
 
   const renderContent = () => {
     switch (activeTab) {
@@ -83,6 +26,17 @@ function App() {
         return <StrainLibrary />;
       case 'dispensaries':
         return <DispensaryList dispensaries={dispensaries} userLocation={userLocation} />;
+      case 'contribute': // Add case
+        return (
+          <div className="max-w-4xl mx-auto pt-10">
+            <SubmitStrainForm
+              onSuccess={(strain) => {
+                console.log("Strain added:", strain);
+                // Optional: Switch to library or show toast
+              }}
+            />
+          </div>
+        );
       case 'consult':
       default:
         return (

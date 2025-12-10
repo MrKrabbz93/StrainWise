@@ -1,0 +1,53 @@
+{
+    "welcome": {
+        "title": "StrainWise",
+        "subtitle": "Votre Consultant Cannabis IA Personnel",
+        "getStarted": "Commencer",
+        "login": "Connexion"
+    },
+    "auth": {
+        "signIn": "Se Connecter",
+        "signUp": "S'inscrire",
+        "email": "E-mail",
+        "password": "Mot de passe",
+        "continue": "Continuer"
+    },
+    "tabs": {
+        "consultant": "Consultant",
+        "library": "Souches",
+        "dispensaries": "Dispensaires",
+        "profile": "Profil"
+    },
+    "profile": {
+        "favorites": "Favoris",
+        "inbox": "Boîte de réception",
+        "community": "Communauté",
+        "sponsorship": "Parrainage",
+        "sommelier": "Sommelier IA",
+        "system": "Système",
+        "settings": "Paramètres",
+        "logout": "Déconnexion",
+        "edit": "Modifier le Profil",
+        "save": "Enregistrer",
+        "cancel": "Annuler",
+        "public": "Public",
+        "private": "Privé"
+    },
+    "sommelier": {
+        "title": "Sommelier IA",
+        "desc": "Recommandations sur mesure basées sur vos goûts.",
+        "curate": "Organiser Mon Menu"
+    },
+    "system": {
+        "push_notifications": "Notifications Push",
+        "enable_tips": "Activer Conseils Quotidiens",
+        "tips_enabled": "Conseils Quotidiens Activés !",
+        "desc": "Recevez des recommandations quotidiennes."
+    },
+    "landing": {
+        "tagline": "Intelligence Cannabique Premium",
+        "description": "Découvrez l'avenir de la consultation cannabique personnalisée. Propulsé par une IA avancée pour guider votre voyage de la curiosité à l'expert.",
+        "button": "Entrer dans l'Expérience",
+        "footer": "Est. 2025 • Perth • WA"
+    }
+}

@@ -1,0 +1,53 @@
+{
+    "welcome": {
+        "title": "StrainWise",
+        "subtitle": "Tu Consultor Personal de Cannabis con IA",
+        "getStarted": "Comenzar",
+        "login": "Iniciar Sesión"
+    },
+    "auth": {
+        "signIn": "Ingresar",
+        "signUp": "Registrarse",
+        "email": "Correo Electrónico",
+        "password": "Contraseña",
+        "continue": "Continuar"
+    },
+    "tabs": {
+        "consultant": "Consultor",
+        "library": "Cepas",
+        "dispensaries": "Dispensarios",
+        "profile": "Perfil"
+    },
+    "profile": {
+        "favorites": "Favoritos",
+        "inbox": "Bandeja",
+        "community": "Comunidad",
+        "sponsorship": "Patrocinio",
+        "sommelier": "Sommelier IA",
+        "system": "Sistema",
+        "settings": "Ajustes",
+        "logout": "Cerrar Sesión",
+        "edit": "Editar Perfil",
+        "save": "Guardar Cambios",
+        "cancel": "Cancelar",
+        "public": "Público",
+        "private": "Privado"
+    },
+    "sommelier": {
+        "title": "Sommelier IA",
+        "desc": "Recomendaciones a medida basadas en tu gusto único.",
+        "curate": "Curar Mi Menú"
+    },
+    "system": {
+        "push_notifications": "Notificaciones Push",
+        "enable_tips": "Activar Consejos Diarios",
+        "tips_enabled": "¡Consejos Diarios Activados!",
+        "desc": "Recibe recomendaciones diarias de cepas."
+    },
+    "landing": {
+        "tagline": "Inteligencia Cannábica Premium",
+        "description": "Experimenta el futuro de la consulta personalizada de cannabis. Impulsado por IA avanzada para guiar tu viaje de la curiosidad al experto.",
+        "button": "Entrar a la Experiencia",
+        "footer": "Est. 2025 • Perth • WA"
+    }
+}

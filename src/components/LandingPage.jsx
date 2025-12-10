@@ -1,12 +1,21 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next';
 import { ArrowRight, Sparkles } from 'lucide-react';
 import Background from './Background';
+import LanguageSwitcher from './LanguageSwitcher';
 
 const LandingPage = ({ onEnter }) => {
+    const { t } = useTranslation();
+
     return (
         <div className="relative w-full h-screen overflow-hidden flex flex-col items-center justify-center text-center z-50 bg-slate-950">
             <Background />
+
+            {/* Language Switcher Top Right */}
+            <div className="absolute top-4 right-4 z-50">
+                <LanguageSwitcher />
+            </div>
 
             <div className="relative z-10 p-6 max-w-4xl">
                 <motion.div
@@ -17,12 +26,12 @@ const LandingPage = ({ onEnter }) => {
                 >
                     <div className="flex items-center justify-center gap-3 mb-4 text-emerald-400/80 uppercase tracking-[0.3em] text-sm font-medium">
                         <Sparkles className="w-4 h-4" />
-                        <span>Premium Cannabis Intelligence</span>
+                        <span>{t('landing.tagline')}</span>
                         <Sparkles className="w-4 h-4" />
                     </div>
 
                     <h1 className="text-6xl md:text-8xl font-bold text-transparent bg-clip-text bg-gradient-to-b from-white via-slate-200 to-slate-500 mb-6 tracking-tight">
-                        Strain<span className="text-emerald-500">Wise</span>
+                        {t('welcome.title')}<span className="text-emerald-500">Wise</span>
                         <sup className="text-xs text-slate-500 ml-2 font-mono align-top opacity-50">v1.1</sup>
                     </h1>
                 </motion.div>
@@ -33,8 +42,7 @@ const LandingPage = ({ onEnter }) => {
                     transition={{ delay: 0.5, duration: 1 }}
                     className="text-lg md:text-xl text-slate-400 mb-12 max-w-2xl mx-auto leading-relaxed"
                 >
-                    Experience the future of personalized cannabis consultation.
-                    Powered by advanced AI to guide your journey from curiosity to connoisseur.
+                    {t('landing.description')}
                 </motion.p>
 
                 <motion.button
@@ -48,7 +56,7 @@ const LandingPage = ({ onEnter }) => {
                 >
                     <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out" />
                     <span className="relative flex items-center gap-2">
-                        Enter Experience
+                        {t('landing.button')}
                         <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                     </span>
                 </motion.button>
@@ -61,7 +69,7 @@ const LandingPage = ({ onEnter }) => {
                 transition={{ delay: 1.5, duration: 1 }}
                 className="absolute bottom-8 text-slate-600 text-xs tracking-widest uppercase"
             >
-                Est. 2025 • Perth • WA
+                {t('landing.footer')}
             </motion.div>
         </div>
     );

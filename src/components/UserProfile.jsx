@@ -1,13 +1,14 @@
-import React, { useEffect, useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { User, Heart, LogOut, Loader2, Mail, Users, Globe, Lock, Edit2, Save, Briefcase, ShieldCheck, Sparkles, RefreshCw, Activity, Bell } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import { useTranslation } from 'react-i18next'; // Add import
+import { User, Heart, LogOut, Loader2, Mail, Users, Globe, Lock, Edit2, Save, Briefcase, ShieldCheck, Sparkles, RefreshCw, Activity, Bell, Upload } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { generateImage, getPersonalizedRecommendation } from '../lib/gemini';
-import { RANKS } from '../lib/gamification';
 import Leaderboard from './Leaderboard';
 import { scheduleDailyTip } from '../lib/notifications';
 
 const UserProfile = ({ user, onLogout }) => {
+    const { t } = useTranslation();
     const [activeTab, setActiveTab] = useState('favorites');
     const [favorites, setFavorites] = useState([]);
     const [messages, setMessages] = useState([]);
@@ -548,24 +549,25 @@ const UserProfile = ({ user, onLogout }) => {
                         </div>
                     )}
 
+// ... component code
                     {activeTab === 'system' && (
                         <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-6">
                             <div className="flex items-center justify-between p-4 bg-slate-800 rounded-xl">
                                 <div>
                                     <h4 className="text-white font-bold flex items-center gap-2">
-                                        <Bell className="w-4 h-4 text-emerald-400" /> Push Notifications
+                                        <Bell className="w-4 h-4 text-emerald-400" /> {t('system.push_notifications')}
                                     </h4>
-                                    <p className="text-xs text-slate-400">Receive daily strain recommendations.</p>
+                                    <p className="text-xs text-slate-400">{t('system.desc')}</p>
                                 </div>
                                 <button
                                     onClick={async () => {
                                         const success = await scheduleDailyTip();
-                                        if (success) alert("Daily Tips Enabled! You will receive a notification in 24 hours.");
+                                        if (success) alert(t('system.tips_enabled'));
                                         else alert("Notification permission denied or not supported.");
                                     }}
                                     className="px-4 py-2 bg-emerald-500/10 text-emerald-400 font-bold text-xs rounded-lg hover:bg-emerald-500/20 border border-emerald-500/20 transition-all"
                                 >
-                                    Enable Daily Tips
+                                    {t('system.enable_tips')}
                                 </button>
                             </div>
 
@@ -592,6 +594,7 @@ const UserProfile = ({ user, onLogout }) => {
 
 // Helper Component for Sommelier View
 const SommelierView = ({ user, favorites }) => {
+    const { t } = useTranslation();
     const [recommendations, setRecommendations] = useState([]);
     const [loading, setLoading] = useState(false);
 
@@ -612,10 +615,10 @@ const SommelierView = ({ user, favorites }) => {
     return (
         <div className="bg-slate-900/50 border border-purple-500/20 rounded-xl p-6 text-center">
             <h3 className="text-2xl font-bold text-white mb-4 flex items-center justify-center gap-2">
-                <Sparkles className="w-6 h-6 text-purple-400" /> AI Sommelier
+                <Sparkles className="w-6 h-6 text-purple-400" /> {t('sommelier.title')}
             </h3>
             <p className="text-slate-400 mb-6 max-w-lg mx-auto">
-                Our AI analyzes your taste profile (Favorites & Reviews) to curate a bespoke tasting menu of strains you've likely never tried but will love.
+                {t('sommelier.desc')}
             </p>
 
             {recommendations.length === 0 ? (
@@ -624,7 +627,7 @@ const SommelierView = ({ user, favorites }) => {
                     disabled={loading}
                     className="bg-purple-600 hover:bg-purple-500 text-white font-bold py-3 px-8 rounded-full shadow-lg shadow-purple-500/20 transition-all hover:scale-105 disabled:opacity-50"
                 >
-                    {loading ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : "Curate My Menu"}
+                    {loading ? <Loader2 className="w-5 h-5 animate-spin mx-auto" /> : t('sommelier.curate')}
                 </button>
             ) : (
                 <div className="grid md:grid-cols-3 gap-6 mt-8">

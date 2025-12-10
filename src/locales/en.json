@@ -1,0 +1,53 @@
+{
+    "welcome": {
+        "title": "StrainWise",
+        "subtitle": "Your Personal AI Cannabis Consultant",
+        "getStarted": "Get Started",
+        "login": "Login"
+    },
+    "auth": {
+        "signIn": "Sign In",
+        "signUp": "Sign Up",
+        "email": "Email",
+        "password": "Password",
+        "continue": "Continue"
+    },
+    "tabs": {
+        "consultant": "Consultant",
+        "library": "Strains",
+        "dispensaries": "Dispensaries",
+        "profile": "Profile"
+    },
+    "profile": {
+        "favorites": "Favorites",
+        "inbox": "Inbox",
+        "community": "Community",
+        "sponsorship": "Sponsorship",
+        "sommelier": "AI Sommelier",
+        "system": "System",
+        "settings": "Settings",
+        "logout": "Log Out",
+        "edit": "Edit Profile",
+        "save": "Save Changes",
+        "cancel": "Cancel",
+        "public": "Public",
+        "private": "Private"
+    },
+    "sommelier": {
+        "title": "AI Sommelier",
+        "desc": "Bespoke recommendations based on your unique taste.",
+        "curate": "Curate My Menu"
+    },
+    "system": {
+        "push_notifications": "Push Notifications",
+        "enable_tips": "Enable Daily Tips",
+        "tips_enabled": "Daily Tips Enabled!",
+        "desc": "Receive daily strain recommendations."
+    },
+    "landing": {
+        "tagline": "Premium Cannabis Intelligence",
+        "description": "Experience the future of personalized cannabis consultation. Powered by advanced AI to guide your journey from curiosity to connoisseur.",
+        "button": "Enter Experience",
+        "footer": "Est. 2025 • Perth • WA"
+    }
+}

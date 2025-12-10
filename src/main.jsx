@@ -7,6 +7,7 @@ import ErrorBoundary from './components/ErrorBoundary.jsx'
 
 import { Analytics } from '@vercel/analytics/react';
 import { registerSW } from 'virtual:pwa-register';
+import './lib/i18n'; // Initialize i18n
 
 // PWA: Auto-update service worker
 const updateSW = registerSW({
