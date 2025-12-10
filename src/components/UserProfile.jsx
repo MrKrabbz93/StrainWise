@@ -568,7 +568,7 @@ const UserProfile = ({ user, onLogout }) => {
                                             <div className="text-xs text-slate-500">{import.meta.env.VITE_GEMINI_API_KEY ? 'API Key Present' : 'Missing VITE_GEMINI_API_KEY'}</div>
                                         </div>
                                     </div>
-                                    <span className="text-xs font-mono bg-slate-900 px-2 py-1 rounded text-slate-400">gemini-1.5-flash</span>
+                                    <span className="text-xs font-mono bg-slate-900 px-2 py-1 rounded text-slate-400">gemini-1.5-pro</span>
                                 </div>
 
                                 <div className="p-4 bg-emerald-500/5 text-emerald-400 text-xs rounded-lg border border-emerald-500/10">
