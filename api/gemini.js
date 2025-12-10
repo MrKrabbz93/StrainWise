@@ -28,7 +28,7 @@ export default async function handler(req, res) {
 
     try {
         const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-001" });
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
         let text = "";
 
@@ -60,7 +60,13 @@ export default async function handler(req, res) {
 
         return res.status(200).json({ text });
     } catch (error) {
-        console.error("Gemini API Error:", error);
-        return res.status(500).json({ error: 'Failed to generate content', details: error.message });
+        console.error("Gemini API Backend Error:", error);
+        // Extract mostly useful info from the error object
+        const errorMessage = error.response ? JSON.stringify(await error.response.json()) : error.message;
+        return res.status(500).json({
+            error: 'Failed to generate content',
+            details: errorMessage,
+            model: "gemini-1.5-flash"
+        });
     }
 }
