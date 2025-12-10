@@ -2,6 +2,8 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 
 // Initialize Gemini API (Legacy/Dev Mode)
 const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
+const genAI = new GoogleGenerativeAI(API_KEY);
+const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 const callGemini = async (payload) => {
     // In a real scenario, we'd check import.meta.env.PROD
     // For this implementation, we try the backend first, fallback to direct if it fails (or if we are in dev and want direct)
@@ -31,11 +33,8 @@ const callGemini = async (payload) => {
             const data = await response.json();
             return data.text;
         } catch (e) {
-            console.error("Backend failed:", e);
-            // If backend exists but fails (e.g. 500), we should probably notify the user 
-            // instead of silently falling back to a null model which triggers "Demo Mode".
-            // Let's return the error message for debugging.
-            return `System Error: ${e.message}. (Please verify Vercel Env Vars)`;
+            console.error("Backend failed, falling back to client-side SDK:", e);
+            // Continue execution to fallback block below...
         }
     }
 

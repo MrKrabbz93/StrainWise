@@ -161,11 +161,11 @@ function App() {
                   console.warn("Location access denied or error:", error);
                   // Optional: Set default to Perth if denied explicitly, though 'null' handles it in Map component.
                   // But setting it here ensures "Nearby" logic uses Perth if desired.
-                  if (error.code === 1) alert("Please enable location services to find dispensaries near you.");
+                  if (error.code === 1) console.warn("User denied location services. Defaulting to 'null' (Global/Perth).");
                 }
               );
             } else {
-              alert("Geolocation is not supported by your browser.");
+              console.warn("Geolocation is not supported by this browser.");
             }
             // Check if tutorial was already seen in this session or local storage
             const seen = localStorage.getItem('strainwise_tutorial_seen');
