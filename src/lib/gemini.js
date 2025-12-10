@@ -52,6 +52,13 @@ const callGemini = async (payload) => {
     }
 
     const performRequest = async (currentModel) => {
+        // Dynamic Tools Configuration
+        const requestTools = payload.tools ? payload.tools : [];
+        const requestConfig = { ...payload.generationConfig };
+
+        // If google search is requested (Check capabilities)
+        // For 'gemini-2.0-flash-exp', standard tools array works.
+
         if (payload.type === 'chat') {
             // Gemini requires history to start with 'user'. Filter out initial 'model' greeting if present.
             let validHistory = payload.history.map(msg => ({
@@ -59,20 +66,25 @@ const callGemini = async (payload) => {
                 parts: [{ text: msg.content }],
             }));
 
-            // Remove leading model messages until we find a user message
             while (validHistory.length > 0 && validHistory[0].role === 'model') {
                 validHistory.shift();
             }
 
             const chat = currentModel.startChat({
                 history: validHistory,
-                generationConfig: { maxOutputTokens: 200 },
+                generationConfig: { maxOutputTokens: 500, ...requestConfig },
+                tools: requestTools
             });
             const result = await chat.sendMessage(`${payload.systemPrompt}\nUser: ${payload.prompt}`);
             const response = await result.response;
             return response.text();
         } else {
-            const result = await currentModel.generateContent(payload.prompt);
+            // For single generation (research mode)
+            const result = await currentModel.generateContent({
+                contents: [{ role: 'user', parts: [{ text: payload.prompt }] }],
+                tools: requestTools,
+                generationConfig: requestConfig
+            });
             const response = await result.response;
             return response.text();
         }
@@ -89,9 +101,19 @@ const callGemini = async (payload) => {
 export const generateResponse = async (history, userMessage, persona = "helpful", location = null) => {
     let systemPrompt = getPersonaPrompt(persona);
 
+    // Dynamic Context Injection
+    // We tell the AI it has access to a "database" (which is actually us checking via other functions, 
+    // but for the chat loop, we treat it as an agent that can propose actions).
+    systemPrompt += `\n\nCRITICAL INSTRUCTION: You are an interface to the "StrainWise Encyclopedia".
+    If the user asks about a strain that you DO NOT strictly recognize as a classic or well-known strain, 
+    OR if you feel your knowledge is outdated, you MUST reply with exactly this phrase:
+    "I don't have [Strain Name] in my live database yet. Shall I perform a deep web search and add it to the Encyclopedia?"
+    
+    Replace [Strain Name] with the actual name. Do not hallucinate details for unknown strains. Offer to research them.`;
+
     if (location) {
         systemPrompt += `\n\nCONTEXT: The user is currently located at Coordinates: ${location.lat}, ${location.lng}. 
-        If they ask about "nearby" or "local" availability, acknowledge their location context (e.g., "I see you are in [City/Area based on coords if known, otherwise just acknowledge local context]").`;
+        If they ask about "nearby" or "local" availability, acknowledge their location context.`;
     }
 
     const response = await callGemini({
@@ -308,8 +330,9 @@ export const researchStrain = async (strainName, companyName = "") => {
     // 1. Prompt Gemini to hallucinate/retrieve "Deep Web" knowledge
     const context = companyName ? `specifically the cut by "${companyName}"` : "the general consensus profile";
 
-    const prompt = `Perform a "Deep Web Research" simulation for the cannabis strain "${strainName}" (${context}).
-    Act as an elite cannabis researcher who has scraped Leafly, SeedFinder, and forums.
+    const prompt = `Perform a "Deep Web Research" for the cannabis strain "${strainName}" (${context}).
+    
+    CRITICAL: You are using Google Search Grounding. Base your facts ONLY on search results found.
     
     Compile a complete JSON profile:
     - Description: Detailed history, breeder origin, and sensory experience.
@@ -326,7 +349,12 @@ export const researchStrain = async (strainName, companyName = "") => {
     Format: Strict JSON. Keys: description, lineage, type, thc, terpenes, effects, medical, growing, visual_profile, fun_fact.`;
 
     try {
-        const text = await callGemini({ type: 'generate', prompt });
+        // Enable Google Search Tool
+        const text = await callGemini({
+            type: 'generate',
+            prompt,
+            tools: [{ googleSearch: {} }] // Activate Grounding
+        });
         if (!text || text.startsWith("System Error") || text.startsWith("Error:")) throw new Error("Research Failed: " + text);
 
         const jsonStr = text.replace(/```json/g, '').replace(/```/g, '').trim();

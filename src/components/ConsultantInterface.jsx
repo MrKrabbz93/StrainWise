@@ -35,6 +35,49 @@ const ConsultantInterface = ({ onRecommend, userLocation }) => {
     scrollToBottom();
   }, [messages, isLoading]); // Scroll on new messages or loading state change
 
+  // Action Handler for Research
+  const handleResearchAction = async (strainName) => {
+    const loadingMsg = { role: 'assistant', content: `🔍 Searching the deep web for "${strainName}"...` };
+    setMessages(prev => [...prev, loadingMsg]);
+    setIsLoading(true);
+
+    try {
+      // 1. Research
+      const { researchStrain, generateImage } = await import('../lib/gemini');
+      const { supabase } = await import('../lib/supabase');
+
+      const aiData = await researchStrain(strainName);
+      if (!aiData) throw new Error("Research yielded no results.");
+
+      // 2. Image Gen
+      const imagePrompt = `High quality, photorealistic close-up of cannabis strain ${aiData.name}. Visual traits: ${aiData.visual_profile || 'green'}.`;
+      const imageUrl = await generateImage(imagePrompt);
+
+      // 3. Save to DB
+      const { data: { user } } = await supabase.auth.getUser();
+      const { error: dbError } = await supabase.from('strains').insert([{
+        ...aiData,
+        image_url: imageUrl,
+        contributed_by: user ? user.id : null
+      }]);
+
+      if (dbError) throw dbError;
+
+      setMessages(prev => [
+        ...prev,
+        { role: 'assistant', content: `✅ Success! I found accurate data for **${aiData.name}** and added it to the Encyclopedia.\n\n*Type: ${aiData.type} | THC: ${aiData.thc}*\n\nWould you like to see the full profile?` }
+      ]);
+
+      if (onRecommend) onRecommend([aiData.name]); // Trigger card view
+
+    } catch (err) {
+      console.error(err);
+      setMessages(prev => [...prev, { role: 'assistant', content: "❌ Research failed. The strain might be too obscure or the database connection failed." }]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleSend = async () => {
     if (!input.trim()) return;
 
@@ -45,9 +88,20 @@ const ConsultantInterface = ({ onRecommend, userLocation }) => {
 
     try {
       const responseText = await generateResponse(messages, input, persona, userLocation);
-
       setMessages(prev => [...prev, { role: 'assistant', content: responseText }]);
 
+      // Check for Research Trigger Phrase
+      const researchMatch = responseText.match(/I don't have (.*?) in my live database yet/);
+      if (researchMatch && researchMatch[1]) {
+        const foundName = researchMatch[1].replace(/\[|\]/g, '').trim(); // Clean brackets if any
+        // Add a special "system" message with an action button
+        setMessages(prev => [...prev, {
+          role: 'system_action',
+          content: foundName
+        }]);
+      }
+
+      /* Recommendation Logic (Existing) */
       let recommendations = [];
       const lowerInput = input.toLowerCase();
       if (lowerInput.includes('sleep') || lowerInput.includes('insomnia')) {
@@ -59,10 +113,11 @@ const ConsultantInterface = ({ onRecommend, userLocation }) => {
       } else {
         recommendations = ['Blue Dream', 'OG Kush'];
       }
-
-      if (onRecommend && recommendations.length > 0) {
+      if (onRecommend && recommendations.length > 0 && !researchMatch) {
+        // Only recommend defaults if not in research mode
         onRecommend(recommendations);
       }
+
     } catch (error) {
       setMessages(prev => [...prev, { role: 'assistant', content: "I apologize, but I'm having trouble connecting right now." }]);
     } finally {
@@ -93,12 +148,26 @@ const ConsultantInterface = ({ onRecommend, userLocation }) => {
               animate={{ opacity: 1, y: 0 }}
               className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}
             >
-              <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${msg.role === 'user' ? 'bg-emerald-500 text-slate-950' : 'bg-slate-700 text-emerald-400'}`}>
-                {msg.role === 'user' ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
-              </div>
-              <div className={`max-w-[80%] p-3 rounded-2xl text-sm leading-relaxed ${msg.role === 'user' ? 'bg-emerald-500/10 text-emerald-100 border border-emerald-500/20 rounded-tr-none' : 'bg-slate-800 text-slate-300 border border-slate-700 rounded-tl-none'}`}>
-                {typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content)}
-              </div>
+              {msg.role === 'system_action' ? (
+                <div className="w-full flex justify-center my-2">
+                  <button
+                    onClick={() => handleResearchAction(msg.content)}
+                    className="bg-emerald-500 hover:bg-emerald-400 text-slate-900 font-bold py-2 px-6 rounded-full flex items-center gap-2 shadow-lg shadow-emerald-500/20 transition-all hover:scale-105"
+                  >
+                    <Sparkles className="w-4 h-4" />
+                    Research & Add "{msg.content}"
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${msg.role === 'user' ? 'bg-emerald-500 text-slate-950' : 'bg-slate-700 text-emerald-400'}`}>
+                    {msg.role === 'user' ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
+                  </div>
+                  <div className={`max-w-[80%] p-3 rounded-2xl text-sm leading-relaxed ${msg.role === 'user' ? 'bg-emerald-500/10 text-emerald-100 border border-emerald-500/20 rounded-tr-none' : 'bg-slate-800 text-slate-300 border border-slate-700 rounded-tl-none'}`}>
+                    {typeof msg.content === 'string' ? msg.content : JSON.stringify(msg.content)}
+                  </div>
+                </>
+              )}
             </motion.div>
           ))}
         </AnimatePresence>
