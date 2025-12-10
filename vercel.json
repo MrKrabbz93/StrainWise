@@ -35,14 +35,5 @@
             ]
         }
     ],
-    "crons": [
-        {
-            "path": "/api/cron/daily-research",
-            "schedule": "0 9 * * *"
-        },
-        {
-            "path": "/api/cron/update-rankings",
-            "schedule": "0 */4 * * *"
-        }
-    ]
+]
 }
