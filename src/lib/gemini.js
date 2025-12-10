@@ -3,7 +3,9 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 // Initialize Gemini API (Legacy/Dev Mode)
 const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 const genAI = new GoogleGenerativeAI(API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-3.0-pro" });
+const getModel = () => genAI.getGenerativeModel({ model: "gemini-3.0-pro" });
+const getFallbackModel = () => genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+let model = getModel();
 
 export const isAIEnabled = () => {
     return !!API_KEY;
@@ -50,29 +52,43 @@ const callGemini = async (payload) => {
         return null; // Signal demo mode
     }
 
-    if (payload.type === 'chat') {
-        // Gemini requires history to start with 'user'. Filter out initial 'model' greeting if present.
-        let validHistory = payload.history.map(msg => ({
-            role: msg.role === 'assistant' ? 'model' : 'user',
-            parts: [{ text: msg.content }],
-        }));
+    const performRequest = async (currentModel) => {
+        if (payload.type === 'chat') {
+            // Gemini requires history to start with 'user'. Filter out initial 'model' greeting if present.
+            let validHistory = payload.history.map(msg => ({
+                role: msg.role === 'assistant' ? 'model' : 'user',
+                parts: [{ text: msg.content }],
+            }));
 
-        // Remove leading model messages until we find a user message
-        while (validHistory.length > 0 && validHistory[0].role === 'model') {
-            validHistory.shift();
+            // Remove leading model messages until we find a user message
+            while (validHistory.length > 0 && validHistory[0].role === 'model') {
+                validHistory.shift();
+            }
+
+            const chat = currentModel.startChat({
+                history: validHistory,
+                generationConfig: { maxOutputTokens: 200 },
+            });
+            const result = await chat.sendMessage(`${payload.systemPrompt}\nUser: ${payload.prompt}`);
+            const response = await result.response;
+            return response.text();
+        } else {
+            const result = await currentModel.generateContent(payload.prompt);
+            const response = await result.response;
+            return response.text();
         }
+    };
 
-        const chat = model.startChat({
-            history: validHistory,
-            generationConfig: { maxOutputTokens: 200 },
-        });
-        const result = await chat.sendMessage(`${payload.systemPrompt}\nUser: ${payload.prompt}`);
-        const response = await result.response;
-        return response.text();
-    } else {
-        const result = await model.generateContent(payload.prompt);
-        const response = await result.response;
-        return response.text();
+    try {
+        return await performRequest(model);
+    } catch (err) {
+        console.warn("Client-side Gemini 3.0 Pro failed, trying fallback to 1.5 Pro:", err);
+        try {
+            return await performRequest(getFallbackModel());
+        } catch (fallbackErr) {
+            console.error("All Gemini models failed:", fallbackErr);
+            throw fallbackErr;
+        }
     }
 };
 
