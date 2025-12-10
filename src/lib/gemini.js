@@ -6,6 +6,7 @@ const genAI = new GoogleGenerativeAI(API_KEY);
 const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
 
 export const isAIEnabled = () => {
+    console.log("🚀 StrainWise AI Module v2.0 (Gemini 2.0 Flash) - Loaded");
     return !!API_KEY;
 };
 
