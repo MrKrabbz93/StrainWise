@@ -35,7 +35,46 @@ const ConsultantInterface = ({ onRecommend, userLocation }) => {
     scrollToBottom();
   }, [messages, isLoading]); // Scroll on new messages or loading state change
 
-  // ... (rest of component handles) ...
+  const handleSend = async () => {
+    if (!input.trim()) return;
+
+    const userMessage = { role: 'user', content: input };
+    setMessages(prev => [...prev, userMessage]);
+    setInput('');
+    setIsLoading(true);
+
+    try {
+      const responseText = await generateResponse(messages, input, persona, userLocation);
+
+      setMessages(prev => [...prev, { role: 'assistant', content: responseText }]);
+
+      let recommendations = [];
+      const lowerInput = input.toLowerCase();
+      if (lowerInput.includes('sleep') || lowerInput.includes('insomnia')) {
+        recommendations = ['Granddaddy Purple', 'OG Kush'];
+      } else if (lowerInput.includes('focus') || lowerInput.includes('creative')) {
+        recommendations = ['Blue Dream', 'Jack Herer'];
+      } else if (lowerInput.includes('pain')) {
+        recommendations = ['Blue Dream', 'Granddaddy Purple'];
+      } else {
+        recommendations = ['Blue Dream', 'OG Kush'];
+      }
+
+      if (onRecommend && recommendations.length > 0) {
+        onRecommend(recommendations);
+      }
+    } catch (error) {
+      setMessages(prev => [...prev, { role: 'assistant', content: "I apologize, but I'm having trouble connecting right now." }]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      handleSend();
+    }
+  };
 
   return (
     <div className="bg-slate-900/80 backdrop-blur-xl border border-white/10 rounded-2xl p-6 md:p-8 shadow-2xl shadow-emerald-900/10 flex flex-col h-[700px] relative overflow-hidden">
