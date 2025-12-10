@@ -79,6 +79,10 @@ const callGemini = async (payload) => {
         }
     };
 
+    const getSafetyNetModel = () => genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+
+    // ... inside callGemini ...
+
     try {
         return await performRequest(model);
     } catch (err) {
@@ -86,8 +90,13 @@ const callGemini = async (payload) => {
         try {
             return await performRequest(getFallbackModel());
         } catch (fallbackErr) {
-            console.error("All Gemini models failed:", fallbackErr);
-            throw fallbackErr;
+            console.warn("Gemini 1.5 Pro failed, trying safety net (1.5 Flash):", fallbackErr);
+            try {
+                return await performRequest(getSafetyNetModel());
+            } catch (finalErr) {
+                console.error("All Gemini models (3.0, 1.5 Pro, Flash) failed:", finalErr);
+                throw finalErr;
+            }
         }
     }
 };

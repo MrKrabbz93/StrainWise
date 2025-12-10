@@ -58,13 +58,18 @@ export default async function handler(req, res) {
             }
         };
 
-        let text = "";
         try {
             text = await generate(model);
         } catch (primaryError) {
             console.warn("Primary model (Gemini 3.0 Pro) failed, attempting fallback to 1.5 Pro:", primaryError.message);
-            model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
-            text = await generate(model);
+            try {
+                model = genAI.getGenerativeModel({ model: "gemini-1.5-pro" });
+                text = await generate(model);
+            } catch (secondaryError) {
+                console.warn("Secondary model (Gemini 1.5 Pro) failed, attempting safety net (1.5 Flash):", secondaryError.message);
+                model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+                text = await generate(model);
+            }
         }
 
         return res.status(200).json({ text });
