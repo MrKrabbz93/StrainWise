@@ -3,7 +3,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 // Initialize Gemini API (Legacy/Dev Mode)
 const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 const genAI = new GoogleGenerativeAI(API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
 
 export const isAIEnabled = () => {
     return !!API_KEY;
@@ -133,7 +133,7 @@ export const generateCustomerReviews = async (strainName) => {
 
     try {
         const text = await callGemini({ type: 'generate', prompt });
-        if (!text || text.startsWith("System Error")) throw new Error("AI Generation Failed");
+        if (!text || text.startsWith("System Error") || text.startsWith("Error:")) throw new Error("AI Generation Failed: " + text);
 
         try {
             const jsonStr = text.replace(/```json/g, '').replace(/```/g, '').trim();
@@ -201,7 +201,7 @@ export const generateStrainEncyclopediaEntry = async (strainName) => {
 
     try {
         const text = await callGemini({ type: 'generate', prompt });
-        if (!text || text.startsWith("System Error")) throw new Error("AI Generation Failed: " + text);
+        if (!text || text.startsWith("System Error") || text.startsWith("Error:")) throw new Error("AI Generation Failed: " + text);
 
         let aiData;
         try {
@@ -326,7 +326,7 @@ export const researchStrain = async (strainName, companyName = "") => {
 
     try {
         const text = await callGemini({ type: 'generate', prompt });
-        if (!text || text.startsWith("System Error")) throw new Error("Research Failed");
+        if (!text || text.startsWith("System Error") || text.startsWith("Error:")) throw new Error("Research Failed: " + text);
 
         const jsonStr = text.replace(/```json/g, '').replace(/```/g, '').trim();
         return JSON.parse(jsonStr);

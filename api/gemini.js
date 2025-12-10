@@ -54,7 +54,8 @@ export default async function handler(req, res) {
 
     try {
         const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        // User requested "2.5 Flash" -> Using 2.0 Flash Experimental as closest match
+        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash-exp" });
 
         let text = "";
 
@@ -91,7 +92,7 @@ export default async function handler(req, res) {
         return res.status(500).json({
             error: 'Failed to generate content',
             details: errorMessage,
-            model: "gemini-1.5-flash"
+            model: "gemini-2.0-flash-exp"
         });
     }
 }
