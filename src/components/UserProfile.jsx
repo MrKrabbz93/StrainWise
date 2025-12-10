@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { User, Heart, LogOut, Loader2, Mail, Users, Globe, Lock, Edit2, Save, Briefcase, ShieldCheck, Sparkles, RefreshCw } from 'lucide-react';
+import { User, Heart, LogOut, Loader2, Mail, Users, Globe, Lock, Edit2, Save, Briefcase, ShieldCheck, Sparkles, RefreshCw, Activity } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { generateImage } from '../lib/gemini';
 import { RANKS } from '../lib/gamification';
@@ -568,7 +568,7 @@ const UserProfile = ({ user, onLogout }) => {
                                             <div className="text-xs text-slate-500">{import.meta.env.VITE_GEMINI_API_KEY ? 'API Key Present' : 'Missing VITE_GEMINI_API_KEY'}</div>
                                         </div>
                                     </div>
-                                    <span className="text-xs font-mono bg-slate-900 px-2 py-1 rounded text-slate-400">gemini-1.5-flash-001</span>
+                                    <span className="text-xs font-mono bg-slate-900 px-2 py-1 rounded text-slate-400">gemini-1.5-flash</span>
                                 </div>
 
                                 <div className="p-4 bg-emerald-500/5 text-emerald-400 text-xs rounded-lg border border-emerald-500/10">
