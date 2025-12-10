@@ -118,6 +118,9 @@ export default async function handler(req, res) {
                     flavor: flavor,
                     description: description || searchData.answer || 'No description provided.',
                     is_verified: true,
+                    // Track who submitted it (if user_id provided in body, assume authenticated by frontend)
+                    // Note: In strict production we'd verify the JWT in the header. For this demo, we trust the ID passed.
+                    submitted_by: req.body.user_id || null,
                     source_url: sourceUrl || searchData.results?.[0]?.url
                 }
             ])
@@ -128,10 +131,42 @@ export default async function handler(req, res) {
             throw error;
         }
 
+        // 5. Handle Gamification (XP & Contributions)
+        let earnedXP = 0;
+        const userId = req.body.user_id;
+
+        if (userId) {
+            // Fetch current profile first
+            const { data: profile } = await supabase.from('profiles').select('xp, contributions_count').eq('id', userId).single();
+
+            if (profile) {
+                const currentCount = (profile.contributions_count || 0) + 1;
+                let xpToAdd = 50; // Base XP for adding a verified strain (higher than dispensary)
+                earnedXP = 50;
+
+                // Bonus Check (Every 5th contribution)
+                if (currentCount % 5 === 0) {
+                    xpToAdd += 100;
+                    earnedXP += 100;
+                }
+
+                const { error: updateError } = await supabase
+                    .from('profiles')
+                    .update({
+                        xp: (profile.xp || 0) + xpToAdd,
+                        contributions_count: currentCount
+                    })
+                    .eq('id', userId);
+
+                if (updateError) console.error("Failed to update XP:", updateError);
+            }
+        }
+
         return res.status(200).json({
             message: 'Strain verified and added successfully!',
             strain: data[0],
-            verification_source: sourceUrl
+            verification_source: sourceUrl,
+            earned_xp: earnedXP
         });
 
     } catch (error) {

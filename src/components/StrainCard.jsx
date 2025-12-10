@@ -42,142 +42,140 @@ const StrainCard = ({ strain, dispensaries, userLocation }) => {
         setIsGeneratingImage(false);
     };
 
+    const visualProfileMap = {
+        purple: "from-purple-900/40 to-slate-900/90",
+        green_sativa: "from-emerald-900/40 to-slate-900/90",
+        frosty: "from-blue-900/40 to-slate-900/90",
+        orange: "from-orange-900/40 to-slate-900/90",
+        dark: "from-slate-900/90 to-black/90"
+    };
+
     return (
         <>
             <motion.div
-                whileHover={{ y: -5, scale: 1.02 }}
-                className="bg-slate-900/80 backdrop-blur-xl border border-white/10 rounded-xl overflow-hidden transition-all group hover:shadow-[0_0_30px_rgba(16,185,129,0.15)] duration-500 relative"
+                whileHover={{ y: -4, scale: 1.01 }}
+                onClick={() => { }} // Placeholder for future modal
+                className="group relative bg-slate-900/50 backdrop-blur-md rounded-2xl border border-white/5 overflow-hidden hover:shadow-[0_0_40px_-10px_rgba(16,185,129,0.2)] transition-all duration-300"
             >
-                {/* Glow Effect */}
-                <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
-
-                <div className="h-32 w-full relative overflow-hidden group/image">
+                {/* 1. Hero Image Area (Aspect 3:2) */}
+                <div className="aspect-[3/2] relative overflow-hidden">
                     <img
                         src={customImage || getStrainImageUrl(strain)}
                         alt={strain.name}
-                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/20 to-transparent" />
 
-                    {/* Magic Generate Button */}
+                    {/* Gradient Overlays for Readability */}
+                    <div className={`absolute inset-0 bg-gradient-to-t ${visualProfileMap[strain.visual_profile] || "from-slate-900/90 to-transparent"} opacity-90`} />
+                    <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-slate-950/80" />
+
+                    {/* Top Right: Magic Generator */}
                     <button
                         onClick={handleGenerateImage}
                         disabled={isGeneratingImage}
-                        className="absolute top-2 right-2 p-2 bg-slate-950/50 backdrop-blur-md rounded-full text-white/70 hover:text-emerald-400 hover:bg-slate-950/80 border border-white/10 opacity-0 group-hover/image:opacity-100 transition-all z-20"
-                        title="Generate Unique AI Art for this Strain"
+                        className="absolute top-3 right-3 p-2.5 bg-slate-950/40 backdrop-blur-md rounded-full text-white/70 hover:text-emerald-400 hover:bg-slate-950/80 border border-white/10 opacity-0 group-hover:opacity-100 transition-all z-20"
+                        title="Generate Unique AI Art"
                     >
                         {isGeneratingImage ? <Sparkles className="w-4 h-4 animate-spin text-emerald-400" /> : <Sparkles className="w-4 h-4" />}
                     </button>
+
+                    {/* Verified Badge */}
+                    {strain.is_verified && (
+                        <div className="absolute top-3 left-3 z-20">
+                            <div className="flex items-center gap-1.5 px-3 py-1 bg-emerald-500/20 backdrop-blur-md border border-emerald-500/20 rounded-full shadow-lg">
+                                <Sparkles className="w-3 h-3 text-emerald-400 fill-emerald-400" />
+                                <span className="text-[10px] font-bold text-emerald-100 uppercase tracking-wider">Verified</span>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
-                <div className="p-6 relative z-10">
-                    <div className="flex justify-between items-start mb-4">
-                        <div>
-                            <h3 className="text-xl font-bold text-slate-100 group-hover:text-emerald-400 transition-colors">{strain.name}</h3>
-                            <span className={`text-xs font-medium px-2 py-1 rounded-full border border-white/5 ${strain.type.includes('Sativa') ? 'bg-orange-500/10 text-orange-400' :
-                                strain.type.includes('Indica') ? 'bg-purple-500/10 text-purple-400' :
-                                    'bg-emerald-500/10 text-emerald-400'
+                {/* 2. Content Body */}
+                <div className="-mt-12 relative z-10 px-5 pb-5">
+                    {/* Floating Title Card */}
+                    <div className="mb-4">
+                        <div className="flex justify-between items-end mb-1">
+                            <h3 className="text-2xl font-extrabold text-white leading-none tracking-tight group-hover:text-emerald-400 transition-colors drop-shadow-md">
+                                {strain.name}
+                            </h3>
+                            <div className="text-right">
+                                <div className="text-[10px] uppercase tracking-widest text-slate-400 font-bold mb-0.5">THC</div>
+                                <div className="text-lg font-bold text-emerald-400 leading-none">{strain.thc}</div>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider border ${strain.type.includes('Sativa') ? 'border-orange-500/20 text-orange-400 bg-orange-500/5' :
+                                strain.type.includes('Indica') ? 'border-purple-500/20 text-purple-400 bg-purple-500/5' :
+                                    'border-emerald-500/20 text-emerald-400 bg-emerald-500/5'
                                 }`}>
                                 {strain.type}
                             </span>
-                        </div>
-                        <div className="text-right">
-                            <div className="text-sm text-slate-400">THC</div>
-                            <div className="font-bold text-emerald-400">{strain.thc}</div>
-                        </div>
-                    </div>
-
-                    {/* Customer Reviews Section */}
-                    <div className="mb-6 bg-slate-800/50 p-4 rounded-lg border border-white/5 relative overflow-hidden group-hover:border-emerald-500/20 transition-colors">
-                        <div className="absolute top-0 right-0 p-2 opacity-10">
-                            <Star className="w-12 h-12 text-yellow-400" />
-                        </div>
-                        <div className="relative z-10">
-                            <div className="text-xs text-yellow-400 font-bold mb-3 flex items-center gap-1 uppercase tracking-wider">
-                                <Star className="w-3 h-3 fill-yellow-400" /> Patient Experiences
-                            </div>
-                            {isGenerating ? (
-                                <div className="space-y-2">
-                                    <div className="h-4 animate-pulse bg-slate-700/50 rounded w-3/4"></div>
-                                    <div className="h-4 animate-pulse bg-slate-700/50 rounded w-1/2"></div>
-                                </div>
-                            ) : (
-                                <div className="space-y-4">
-                                    {reviews.map((review, idx) => (
-                                        <motion.div
-                                            key={idx}
-                                            initial={{ opacity: 0, x: -10 }}
-                                            animate={{ opacity: 1, x: 0 }}
-                                            transition={{ delay: idx * 0.1 }}
-                                            className="text-sm"
-                                        >
-                                            <div className="flex justify-between items-center text-[10px] text-slate-500 mb-1">
-                                                <span className="font-medium text-slate-400 flex items-center gap-1">
-                                                    <User className="w-3 h-3" /> {review.user}
-                                                </span>
-                                                <div className="flex text-yellow-500">
-                                                    {[...Array(review.rating)].map((_, i) => (
-                                                        <Star key={i} className="w-2 h-2 fill-current" />
-                                                    ))}
-                                                </div>
-                                            </div>
-                                            <p className="text-slate-300 leading-snug italic">"{review.text}"</p>
-                                        </motion.div>
-                                    ))}
-                                </div>
+                            {/* Lineage (truncated) */}
+                            {strain.lineage && (
+                                <span className="text-xs text-slate-500 truncate max-w-[150px] hidden sm:block">
+                                    {strain.lineage}
+                                </span>
                             )}
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4 mb-6">
-                        <div>
-                            <div className="text-xs text-slate-500 mb-1 uppercase tracking-wider">Effects</div>
-                            <div className="flex flex-wrap gap-1">
-                                {strain.effects.map(effect => (
-                                    <span key={effect} className="text-xs bg-slate-800/50 text-slate-300 px-2 py-1 rounded border border-white/5">
-                                        {effect}
-                                    </span>
-                                ))}
-                            </div>
+                    {/* Chips Sections */}
+                    <div className="space-y-3">
+                        {/* Effects */}
+                        <div className="flex flex-wrap gap-1.5">
+                            {strain.effects.slice(0, 3).map(effect => (
+                                <span key={effect} className="px-2.5 py-1 bg-slate-800/50 text-slate-300 rounded-md text-xs font-medium border border-white/5 flex items-center gap-1 group/chip hover:border-emerald-500/30 transition-colors">
+                                    <Brain className="w-3 h-3 text-slate-500 group-hover/chip:text-emerald-400" />
+                                    {effect}
+                                </span>
+                            ))}
                         </div>
-                        <div>
-                            <div className="text-xs text-slate-500 mb-1 uppercase tracking-wider">Medical</div>
-                            <div className="flex flex-wrap gap-1">
-                                {strain.medical.map(condition => (
-                                    <span key={condition} className="text-xs bg-slate-800/50 text-slate-300 px-2 py-1 rounded border border-white/5">
-                                        {condition}
-                                    </span>
-                                ))}
-                            </div>
+
+                        {/* Terpenes or Medical (Mix) */}
+                        <div className="flex flex-wrap gap-1.5">
+                            {strain.terpenes?.slice(0, 2).map(t => (
+                                <span key={t} className="px-2.5 py-1 bg-blue-900/10 text-blue-300 rounded-md text-xs font-medium border border-blue-500/10 flex items-center gap-1">
+                                    <Droplet className="w-3 h-3 text-blue-400/70" />
+                                    {t}
+                                </span>
+                            ))}
                         </div>
                     </div>
 
-                    {availableDispensaries.length > 0 && (
-                        <div className="border-t border-white/10 pt-4">
-                            <div className="flex justify-between items-center mb-2">
-                                <div className="text-xs text-slate-500 uppercase tracking-wider flex items-center gap-1">
-                                    <MapPin className="w-3 h-3" /> Available Nearby
+                    {/* Footer / Actions */}
+                    <div className="mt-5 pt-4 border-t border-white/5 flex justify-between items-center">
+                        {availableDispensaries.length > 0 ? (
+                            <button
+                                onClick={() => setShowMap(true)}
+                                className="flex items-center gap-2 text-xs font-bold text-slate-300 hover:text-white group/btn transition-colors"
+                            >
+                                <div className="w-6 h-6 rounded-full bg-emerald-500/10 flex items-center justify-center group-hover/btn:bg-emerald-500 group-hover/btn:text-slate-900 transition-colors">
+                                    <MapPin className="w-3 h-3" />
                                 </div>
-                                <div className="flex gap-2">
-                                    <button
-                                        onClick={() => setShowMap(true)}
-                                        className="text-xs bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 px-2 py-1 rounded transition-colors"
-                                    >
-                                        View Map
-                                    </button>
-                                    <button className="text-xs text-slate-400 hover:text-slate-300 flex items-center gap-1 transition-colors">
-                                        <Share2 className="w-3 h-3" /> Share
-                                    </button>
-                                </div>
+                                {availableDispensaries.length} Location{availableDispensaries.length !== 1 ? 's' : ''} Nearby
+                            </button>
+                        ) : (
+                            <span className="text-xs text-slate-600 italic">Not in stock nearby</span>
+                        )}
+
+                        <div className="flex gap-2">
+                            <button className="p-2 rounded-full hover:bg-white/5 text-slate-500 hover:text-white transition-colors">
+                                <Share2 className="w-4 h-4" />
+                            </button>
+                            {/* Favorite Button could go here */}
+                        </div>
+                    </div>
+
+                    {/* Reviews Summary (Mini) */}
+                    {reviews.length > 0 && (
+                        <div className="mt-3 bg-slate-950/30 rounded-lg p-3 border border-white/5 flex items-start gap-3">
+                            <div className="bg-yellow-500/10 p-1.5 rounded-full">
+                                <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
                             </div>
-                            <ul className="space-y-2">
-                                {availableDispensaries.slice(0, 2).map(d => (
-                                    <li key={d.id} className="text-sm text-slate-300 flex justify-between items-center group/item hover:bg-white/5 p-2 rounded transition-colors cursor-pointer">
-                                        <span>{d.name}</span>
-                                        <span className="text-xs text-emerald-500 font-medium">{d.rating} ★</span>
-                                    </li>
-                                ))}
-                            </ul>
+                            <div>
+                                <p className="text-xs text-slate-400 line-clamp-2 italic">"{reviews[0].text}"</p>
+                                <p className="text-[10px] text-slate-600 mt-1">— {reviews[0].user}</p>
+                            </div>
                         </div>
                     )}
                 </div>

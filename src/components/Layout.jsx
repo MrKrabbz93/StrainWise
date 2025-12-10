@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { User, Map, BookOpen, Sparkles, Settings, PlusCircle } from 'lucide-react';
 import Background from './Background';
 
-const Layout = ({ children, activeTab, onTabChange, user, onLoginClick, onSettingsClick }) => {
+const Layout = ({ children, activeTab, onTabChange, user, onLoginClick, onSettingsClick, onOpenTerms }) => {
     const { t } = useTranslation();
 
     const navItems = [
@@ -76,8 +76,27 @@ const Layout = ({ children, activeTab, onTabChange, user, onLoginClick, onSettin
                 </div>
             </header>
 
-            <main className="flex-1 relative z-10 pb-20 md:pb-0">
-                {children}
+            <main className="flex-1 relative z-10 pb-20 md:pb-0 flex flex-col">
+                <div className="flex-1">
+                    {children}
+                </div>
+
+                {/* Footer */}
+                <footer className="w-full py-8 mt-12 bg-slate-950/50 border-t border-white/5 backdrop-blur-sm">
+                    <div className="max-w-7xl mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-4 text-xs text-slate-500">
+                        <div>
+                            &copy; 2025 StrainWise. All rights reserved.
+                        </div>
+                        <div className="flex gap-6">
+                            <button onClick={onOpenTerms} className="hover:text-emerald-400 transition-colors">
+                                Terms & Conditions
+                            </button>
+                            <button className="hover:text-emerald-400 transition-colors">
+                                Privacy Policy
+                            </button>
+                        </div>
+                    </div>
+                </footer>
             </main>
 
             {/* Mobile Bottom Navigation */}

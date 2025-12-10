@@ -11,12 +11,16 @@ import AuthModal from './components/AuthModal';
 import UserProfile from './components/UserProfile';
 import SettingsModal from './components/SettingsModal';
 import TutorialOverlay from './components/TutorialOverlay';
-import SubmitStrainForm from './components/SubmitStrainForm'; // Add Import
+import SubmitStrainForm from './components/SubmitStrainForm';
+import SubmitDispensaryForm from './components/SubmitDispensaryForm';
+import TermsAndConditionsModal from './components/TermsAndConditionsModal'; // Add Import
 import { supabase } from './lib/supabase';
 import strainsData from './data/strains.json';
 
 function App() {
   const [activeTab, setActiveTab] = useState('consult');
+  // ... existing state
+  const [contributeMode, setContributeMode] = useState('strain');
   const [recommendations, setRecommendations] = useState([]);
   const [dispensaries, setDispensaries] = useState([]);
   const [userLocation, setUserLocation] = useState(null);
@@ -25,6 +29,7 @@ function App() {
   const [hasEntered, setHasEntered] = useState(false);
   const [showTutorial, setShowTutorial] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [showTermsModal, setShowTermsModal] = useState(false); // Add State
 
   useEffect(() => {
     // Check for user session
@@ -78,15 +83,49 @@ function App() {
         return <StrainLibrary />;
       case 'dispensaries':
         return <DispensaryList dispensaries={dispensaries} userLocation={userLocation} />;
-      case 'contribute': // Add case
+      case 'contribute':
         return (
           <div className="max-w-4xl mx-auto pt-10">
-            <SubmitStrainForm
-              onSuccess={(strain) => {
-                console.log("Strain added:", strain);
-                // Optional: Switch to library or show toast
-              }}
-            />
+            {/* Toggle Switch */}
+            <div className="flex justify-center mb-8">
+              <div className="bg-slate-900 border border-slate-800 rounded-full p-1 flex gap-1">
+                <button
+                  onClick={() => setContributeMode('strain')}
+                  className={`px-6 py-2 rounded-full text-sm font-bold transition-all ${contributeMode === 'strain'
+                    ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20'
+                    : 'text-slate-400 hover:text-white'
+                    }`}
+                >
+                  Add Strain
+                </button>
+                <button
+                  onClick={() => setContributeMode('dispensary')}
+                  className={`px-6 py-2 rounded-full text-sm font-bold transition-all ${contributeMode === 'dispensary'
+                    ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20'
+                    : 'text-slate-400 hover:text-white'
+                    }`}
+                >
+                  Add Dispensary
+                </button>
+              </div>
+            </div>
+
+            {contributeMode === 'strain' ? (
+              <SubmitStrainForm
+                user={user}
+                onSuccess={(strain) => {
+                  console.log("Strain added:", strain);
+                  // Optional
+                }}
+              />
+            ) : (
+              <SubmitDispensaryForm
+                user={user}
+                onSuccess={(dispensary) => {
+                  console.log("Dispensary added:", dispensary);
+                }}
+              />
+            )}
           </div>
         );
       case 'consult':
@@ -211,6 +250,7 @@ function App() {
             user={user}
             onLoginClick={() => setShowAuthModal(true)}
             onSettingsClick={() => setShowSettingsModal(true)}
+            onOpenTerms={() => setShowTermsModal(true)}
           >
             {renderContent()}
           </Layout>
@@ -226,6 +266,15 @@ function App() {
             onClose={() => setShowSettingsModal(false)}
             onResetTutorial={handleResetTutorial}
             onClearCache={handleClearCache}
+            onOpenTerms={() => {
+              setShowSettingsModal(false); // Close settings to show terms
+              setShowTermsModal(true);
+            }}
+          />
+
+          <TermsAndConditionsModal
+            isOpen={showTermsModal}
+            onClose={() => setShowTermsModal(false)}
           />
 
           <AnimatePresence>

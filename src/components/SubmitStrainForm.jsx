@@ -31,7 +31,7 @@ const SubmitStrainForm = ({ onClose, onSuccess }) => {
                 headers: {
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify(formData)
+                body: JSON.stringify({ ...formData, user_id: user?.id })
             });
 
             const data = await response.json();

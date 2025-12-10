@@ -2,7 +2,7 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, RefreshCw, PlayCircle, Trash2, Moon, Sun, Shield } from 'lucide-react';
 
-const SettingsModal = ({ isOpen, onClose, onResetTutorial, onClearCache }) => {
+const SettingsModal = ({ isOpen, onClose, onResetTutorial, onClearCache, onOpenTerms }) => {
     return (
         <AnimatePresence>
             {isOpen && (
@@ -57,6 +57,25 @@ const SettingsModal = ({ isOpen, onClose, onResetTutorial, onClearCache }) => {
                                         <div className="text-left">
                                             <div className="text-white font-medium">Clear App Cache</div>
                                             <div className="text-xs text-slate-500">Fixes storage/loading issues</div>
+                                        </div>
+                                    </div>
+                                </button>
+                            </div>
+
+                            {/* Legal Section */}
+                            <div className="space-y-3">
+                                <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider">Legal</h3>
+                                <button
+                                    onClick={onOpenTerms}
+                                    className="w-full flex items-center justify-between p-4 bg-slate-950 rounded-xl border border-slate-800 hover:border-emerald-500/30 transition-all group"
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-10 h-10 bg-slate-800 rounded-lg flex items-center justify-center group-hover:bg-emerald-500/10 transition-colors">
+                                            <Shield className="w-5 h-5 text-slate-400 group-hover:text-emerald-400" />
+                                        </div>
+                                        <div className="text-left">
+                                            <div className="text-white font-medium">Terms & Conditions</div>
+                                            <div className="text-xs text-slate-500">Read our usage policies</div>
                                         </div>
                                     </div>
                                 </button>

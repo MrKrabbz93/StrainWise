@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, BookOpen, Dna, Thermometer, Activity, Sprout, MapPin, X, Sparkles, Heart, ArrowRight } from 'lucide-react';
+import { Search, BookOpen, Dna, Thermometer, Activity, Sprout, MapPin, X, Sparkles, Heart, ArrowRight, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { generateStrainEncyclopediaEntry } from '../lib/gemini';
 import { supabase } from '../lib/supabase';
@@ -136,34 +136,47 @@ const StrainLibrary = () => {
 
     return (
         <div className="max-w-4xl mx-auto p-6 relative">
-            <div className="text-center mb-12">
-                <h2 className="text-4xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-cyan-400 mb-4">
+            {/* Header / Hero Section */}
+            <div className="text-center mb-16 relative">
+                {/* Decorative background blur */}
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[300px] bg-emerald-500/10 blur-[120px] rounded-full pointer-events-none" />
+
+                <h2 className="text-5xl md:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white via-emerald-100 to-slate-400 mb-6 tracking-tight drop-shadow-sm">
                     Strain Encyclopedia
                 </h2>
-                <p className="text-slate-400">
-                    Access our vast database of cannabis knowledge. Search for any strain to view its complete profile.
+                <p className="text-slate-400 text-lg max-w-2xl mx-auto leading-relaxed">
+                    Explore the world's most comprehensive, AI-verified database of cannabis cultivars.
                 </p>
             </div>
 
-            <form onSubmit={handleSearch} className="mb-12 relative max-w-xl mx-auto">
-                <input
-                    type="text"
-                    value={query}
-                    onChange={(e) => setQuery(e.target.value)}
-                    placeholder="Search for a strain (e.g., 'Granddaddy Purple')..."
-                    id="strain-search-input"
-                    name="strainSearch"
-                    className="w-full bg-slate-900/50 border border-slate-700 rounded-full py-4 px-6 pl-12 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 transition-all"
-                />
-                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
-                <button
-                    type="submit"
-                    disabled={isLoading}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 bg-emerald-500 hover:bg-emerald-600 text-slate-950 px-4 py-2 rounded-full font-medium text-sm transition-colors disabled:opacity-50"
-                >
-                    {isLoading ? 'Searching...' : 'Search'}
-                </button>
-            </form>
+            {/* Floating Search Bar */}
+            <motion.form
+                initial={{ y: 20, opacity: 0 }}
+                animate={{ y: 0, opacity: 1 }}
+                onSubmit={handleSearch}
+                className="mb-16 relative max-w-2xl mx-auto group"
+            >
+                <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/20 to-cyan-500/20 rounded-full blur-xl opacity-20 group-hover:opacity-40 transition-opacity duration-500" />
+                <div className="relative bg-slate-950/80 backdrop-blur-xl border border-white/10 rounded-full p-2 flex items-center shadow-2xl ring-1 ring-white/5 group-focus-within:ring-emerald-500/50 transition-all">
+                    <Search className="w-6 h-6 text-slate-500 ml-4 mr-3 group-focus-within:text-emerald-400 transition-colors" />
+                    <input
+                        type="text"
+                        value={query}
+                        onChange={(e) => setQuery(e.target.value)}
+                        placeholder="Search strains (e.g., 'Gelato #41')..."
+                        id="strain-search-input"
+                        name="strainSearch"
+                        className="w-full bg-transparent text-lg text-slate-100 placeholder-slate-500 focus:outline-none h-12"
+                    />
+                    <button
+                        type="submit"
+                        disabled={isLoading}
+                        className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 px-8 py-3 rounded-full font-bold text-sm transition-all transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:hover:scale-100 shadow-lg shadow-emerald-500/20"
+                    >
+                        {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Search'}
+                    </button>
+                </div>
+            </motion.form>
 
             {/* Add Strain Button */}
             <div className="text-center mb-8">
