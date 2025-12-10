@@ -2,13 +2,16 @@ import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { User, Heart, LogOut, Loader2, Mail, Users, Globe, Lock, Edit2, Save, Briefcase, ShieldCheck, Sparkles, RefreshCw } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { supabase } from '../lib/supabase';
 import { generateImage } from '../lib/gemini';
+import { RANKS } from '../lib/gamification';
 
 const UserProfile = ({ user, onLogout }) => {
     const [activeTab, setActiveTab] = useState('favorites');
     const [favorites, setFavorites] = useState([]);
     const [messages, setMessages] = useState([]);
     const [community, setCommunity] = useState([]);
+    const [activityFeed, setActivityFeed] = useState([]);
     const [profile, setProfile] = useState(null);
     const [loading, setLoading] = useState(true);
     const [isEditing, setIsEditing] = useState(false);
@@ -49,8 +52,12 @@ const UserProfile = ({ user, onLogout }) => {
             }
 
             // Fetch Community (Public Profiles)
-            const { data: publicUsers } = await supabase.from('profiles').select('*').eq('is_public', true);
+            const { data: publicUsers } = await supabase.from('profiles').select('*').eq('is_public', true).limit(10);
             if (publicUsers) setCommunity(publicUsers.filter(p => p.id !== user.id));
+
+            // Fetch Activity Feed
+            const { data: activities } = await supabase.from('community_activity').select('*').order('created_at', { ascending: false }).limit(20);
+            if (activities) setActivityFeed(activities);
 
             setLoading(false);
         };
@@ -148,12 +155,36 @@ const UserProfile = ({ user, onLogout }) => {
                                 {isEditing ? 'Editing Profile' : 'My Profile'}
                             </h2>
                             {!isEditing && (
-                                <button onClick={() => setIsEditing(true)} className="p-1.5 text-slate-400 hover:text-emerald-400 transition-colors bg-white/5 rounded-lg">
-                                    <Edit2 className="w-4 h-4" />
-                                </button>
+                                <div className="flex items-center gap-2">
+                                    <button onClick={() => setIsEditing(true)} className="p-1.5 text-slate-400 hover:text-emerald-400 transition-colors bg-white/5 rounded-lg">
+                                        <Edit2 className="w-4 h-4" />
+                                    </button>
+                                    {/* Rank Badge */}
+                                    {profile?.rank && (
+                                        <div className="px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-2" title={`Current XP: ${profile.xp || 0}`}>
+                                            <span className="text-xl">{RANKS.find(r => r.name === profile.rank)?.icon || '🌱'}</span>
+                                            <span className="text-sm font-bold text-emerald-400 uppercase tracking-wide">{profile.rank}</span>
+                                        </div>
+                                    )}
+                                </div>
                             )}
                         </div>
                         <p className="text-slate-400 text-lg">{user.email}</p>
+
+                        {!isEditing && profile && (
+                            <div className="mt-4 w-full max-w-xs">
+                                <div className="flex justify-between text-xs text-slate-500 mb-1 font-bold uppercase tracking-wider">
+                                    <span>XP Progress</span>
+                                    <span>{profile.xp || 0} / {RANKS.find(r => (profile.xp || 0) < r.minXP)?.minXP || 'MAX'}</span>
+                                </div>
+                                <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+                                    <div
+                                        className="h-full bg-emerald-500"
+                                        style={{ width: `${Math.min(100, ((profile.xp || 0) / (RANKS.find(r => (profile.xp || 0) < r.minXP)?.minXP || 5000)) * 100)}%` }}
+                                    />
+                                </div>
+                            </div>
+                        )}
 
                         {!isEditing && profile?.bio && (
                             <p className="text-slate-300 mt-2 text-sm max-w-md italic">"{profile.bio}"</p>
@@ -371,12 +402,35 @@ const UserProfile = ({ user, onLogout }) => {
                             <div className="mb-6 p-4 bg-emerald-500/5 border border-emerald-500/10 rounded-xl flex items-start gap-3">
                                 <Users className="w-5 h-5 text-emerald-400 mt-0.5" />
                                 <div>
-                                    <h4 className="text-sm font-bold text-emerald-400 mb-1">Connect with Enthusiasts</h4>
+                                    <h4 className="text-sm font-bold text-emerald-400 mb-1">Community Hub</h4>
                                     <p className="text-xs text-slate-400">
-                                        Make your profile public to appear here. Connect with others to share strain recommendations and experiences.
+                                        Recent activity from the inner circle. Contribute data to earn XP and Ranks.
                                     </p>
                                 </div>
                             </div>
+
+                            {/* Activity Feed */}
+                            {activityFeed.length > 0 && (
+                                <div className="mb-8 space-y-3">
+                                    <h4 className="text-sm font-bold text-slate-500 uppercase tracking-wider mb-3">Live Activity</h4>
+                                    {activityFeed.map((activity) => (
+                                        <motion.div
+                                            key={activity.id}
+                                            initial={{ opacity: 0, x: -10 }}
+                                            animate={{ opacity: 1, x: 0 }}
+                                            className="bg-slate-900/50 border border-white/5 p-3 rounded-lg flex items-center gap-3 text-sm text-slate-300"
+                                        >
+                                            <div className="p-2 bg-slate-800 rounded-full">
+                                                {activity.type === 'rank_up' ? '🏆' : activity.type === 'new_strain' ? '🧬' : '💬'}
+                                            </div>
+                                            <div>
+                                                {activity.content}
+                                                <div className="text-[10px] text-slate-500 mt-0.5">{new Date(activity.created_at).toLocaleTimeString()}</div>
+                                            </div>
+                                        </motion.div>
+                                    ))}
+                                </div>
+                            )}
 
                             {community.length > 0 ? (
                                 <div className="grid md:grid-cols-2 gap-4">

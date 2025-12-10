@@ -291,6 +291,40 @@ export const generateWelcomeMessage = async (userName) => {
     }
 };
 
+// AI Researcher Agent (Simulated Web Deep Dive)
+export const researchStrain = async (strainName, companyName = "") => {
+    // 1. Prompt Gemini to hallucinate/retrieve "Deep Web" knowledge
+    const context = companyName ? `specifically the cut by "${companyName}"` : "the general consensus profile";
+
+    const prompt = `Perform a "Deep Web Research" simulation for the cannabis strain "${strainName}" (${context}).
+    Act as an elite cannabis researcher who has scraped Leafly, SeedFinder, and forums.
+    
+    Compile a complete JSON profile:
+    - Description: Detailed history, breeder origin, and sensory experience.
+    - Lineage: Exact parents (e.g., "OG Kush x Durban Poison").
+    - Type: Indica / Sativa / Hybrid (e.g. "Sativa-Dominant Hybrid").
+    - THC: Content range (e.g., "22-28%").
+    - Terpenes: Array of top 3.
+    - Effects: Array of top 3 effects.
+    - Medical: Array of top 3 medicinal uses.
+    - Growing: Difficulty and Flowering Time.
+    - Visual_Profile: One of ["purple", "green_sativa", "frosty", "orange", "dark"].
+    - Fun_Fact: A specific interesting detail about this strain's history or accolades.
+    
+    Format: Strict JSON. Keys: description, lineage, type, thc, terpenes, effects, medical, growing, visual_profile, fun_fact.`;
+
+    try {
+        const text = await callGemini({ type: 'generate', prompt });
+        if (!text || text.startsWith("System Error")) throw new Error("Research Failed");
+
+        const jsonStr = text.replace(/```json/g, '').replace(/```/g, '').trim();
+        return JSON.parse(jsonStr);
+    } catch (error) {
+        console.error("Research Agent failed:", error);
+        return null;
+    }
+};
+
 export const generateImage = async (prompt) => {
     // "Nano Banana" Strategy: Use Imagen 3.0 via REST for best quality
     const apiKey = import.meta.env.VITE_GEMINI_API_KEY;

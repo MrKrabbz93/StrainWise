@@ -7,6 +7,8 @@ import strainsData from '../data/strains.json';
 import dispensariesData from '../data/dispensaries.json';
 import DispensaryMap from './DispensaryMap';
 import { getStrainImageUrl } from '../lib/images';
+import { researchStrain, generateImage } from '../lib/gemini';
+import { addXP, postStrainShoutout } from '../lib/gamification';
 
 // CSS Visual Profiles (Fallback for Image Generation Failure)
 const visualProfiles = {
@@ -25,6 +27,64 @@ const StrainLibrary = () => {
     const [showMap, setShowMap] = useState(false);
     const [nearbyDispensaries, setNearbyDispensaries] = useState([]);
     const [stockStatus, setStockStatus] = useState(null);
+
+    // Add Strain State
+    const [isAddingStrain, setIsAddingStrain] = useState(false);
+    const [newStrainForm, setNewStrainForm] = useState({ name: '', company: '' });
+    const [isResearching, setIsResearching] = useState(false);
+
+    const handleAddStrain = async (e) => {
+        e.preventDefault();
+        if (!newStrainForm.name) return;
+
+        setIsResearching(true);
+        setError(null);
+
+        try {
+            // 0. Check Auth
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) {
+                alert("Please log in to add strains.");
+                setIsResearching(false);
+                return;
+            }
+
+            // 1. AI Research (Deep Dive)
+            const aiData = await researchStrain(newStrainForm.name, newStrainForm.company);
+            if (!aiData) throw new Error("AI Research failed to find sufficient data.");
+
+            // 2. Generate Image
+            const imagePrompt = `High quality, photorealistic close-up of cannabis strain ${aiData.name}. Visual traits: ${aiData.visual_profile}. Style: Nano Banana.`;
+            const imageUrl = await generateImage(imagePrompt);
+
+            // 3. Save to DB
+            const { error: dbError } = await supabase.from('strains').insert([{
+                ...aiData,
+                image_url: imageUrl, // Assuming we add this column or handle it via visual_profile map (but direct url is better for generated)
+                contributed_by: user.id
+            }]);
+
+            if (dbError) throw dbError;
+
+            // 4. Gamification Rewards
+            await addXP(user.id, 150, 'Added new strain');
+            await postStrainShoutout(user.id, aiData.name);
+
+            // 5. Success UI
+            alert(`Success! You earned 150 XP for adding ${aiData.name}.`);
+            setIsAddingStrain(false);
+            setNewStrainForm({ name: '', company: '' });
+            // Optionally set query to new strain to show it immediately
+            setQuery(aiData.name);
+            handleSearch(null, aiData.name);
+
+        } catch (err) {
+            console.error(err);
+            setError("Failed to add strain. Please try again.");
+        } finally {
+            setIsResearching(false);
+        }
+    };
 
     const handleSearch = async (e, directQuery = null) => {
         if (e) e.preventDefault();
@@ -103,6 +163,72 @@ const StrainLibrary = () => {
                     {isLoading ? 'Searching...' : 'Search'}
                 </button>
             </form>
+
+            {/* Add Strain Button */}
+            <div className="text-center mb-8">
+                <button
+                    onClick={() => setIsAddingStrain(!isAddingStrain)}
+                    className="text-xs text-emerald-400 hover:text-emerald-300 underline underline-offset-4"
+                >
+                    {isAddingStrain ? "Cancel Contribution" : "Can't find a strain? Add it to the Encyclopedia"}
+                </button>
+            </div>
+
+            {/* Add Strain Form */}
+            <AnimatePresence>
+                {isAddingStrain && (
+                    <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="max-w-xl mx-auto mb-12 bg-slate-900/80 border border-emerald-500/30 rounded-2xl p-6 backdrop-blur-md overflow-hidden"
+                    >
+                        <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+                            <Sprout className="w-5 h-5 text-emerald-400" /> Contribute to the Hive Mind
+                        </h3>
+                        <form onSubmit={handleAddStrain} className="space-y-4">
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Strain Name</label>
+                                <input
+                                    type="text"
+                                    value={newStrainForm.name}
+                                    onChange={(e) => setNewStrainForm({ ...newStrainForm, name: e.target.value })}
+                                    placeholder="e.g. Blue Dream"
+                                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white focus:border-emerald-500 outline-none"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Breeder / Company (Optional)</label>
+                                <input
+                                    type="text"
+                                    value={newStrainForm.company}
+                                    onChange={(e) => setNewStrainForm({ ...newStrainForm, company: e.target.value })}
+                                    placeholder="e.g. Humboldt Seed Co."
+                                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white focus:border-emerald-500 outline-none"
+                                />
+                            </div>
+                            <div className="bg-emerald-500/10 border border-emerald-500/20 p-3 rounded-lg text-xs text-emerald-300">
+                                ℹ️  Our AI Agent will perform a simulation of deep web research to gather lineage, effects, and medical info. You will earn <strong>150 XP</strong>.
+                            </div>
+                            <button
+                                type="submit"
+                                disabled={isResearching || !newStrainForm.name}
+                                className="w-full bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-slate-950 font-bold py-3 rounded-lg flex items-center justify-center gap-2 transition-colors"
+                            >
+                                {isResearching ? (
+                                    <>
+                                        <Activity className="w-4 h-4 animate-spin" /> Researching & Generating...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Sparkles className="w-4 h-4" /> Start AI Data Mining
+                                    </>
+                                )}
+                            </button>
+                        </form>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {/* Browse Categories & Featured Section - Only show when no search/result */}
             {!strainData && (
