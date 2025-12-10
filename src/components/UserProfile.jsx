@@ -583,7 +583,8 @@ const UserProfile = ({ user, onLogout }) => {
                                                 body: JSON.stringify({ type: 'health' })
                                             });
                                             const data = await res.json();
-                                            alert(`Server Diagnostics:\nTime: ${new Date().toLocaleTimeString()}\nStatus: ${data.status}\nKey Configured: ${data.keyConfigured}\nKey Length: ${data.keyLength}\nRegion: ${data.serverLocation}`);
+                                            const modelsStr = Array.isArray(data.availableModels) ? data.availableModels.join('\n- ') : 'N/A';
+                                            alert(`Server Diagnostics:\nTime: ${new Date().toLocaleTimeString()}\nStatus: ${data.status}\nKey Configured: ${data.keyConfigured}\nRegion: ${data.serverLocation}\n\nAvailable Models (${data.availableModels?.length || 0}):\n- ${modelsStr}`);
                                         } catch (e) {
                                             alert("Connection Failed: " + e.message);
                                         }

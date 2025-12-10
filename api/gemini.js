@@ -30,11 +30,21 @@ export default async function handler(req, res) {
     });
 
     if (type === 'health') {
+        let modelsList = [];
+        try {
+            const listRes = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+            const listData = await listRes.json();
+            modelsList = listData.models ? listData.models.map(m => m.name) : ['Error listing models'];
+        } catch (e) {
+            modelsList = ['Fetch Error: ' + e.message];
+        }
+
         return res.status(200).json({
             status: 'online',
             serverLocation: process.env.VERCEL_REGION || 'unknown',
             keyConfigured: !!apiKey,
-            keyLength: apiKey ? apiKey.length : 0
+            keyLength: apiKey ? apiKey.length : 0,
+            availableModels: modelsList
         });
     }
 
