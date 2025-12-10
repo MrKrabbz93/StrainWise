@@ -40,6 +40,7 @@ class SafeStorage {
 let supabaseClient;
 
 if (supabaseUrl && supabaseAnonKey) {
+    console.log("✅ Supabase: Connected to", supabaseUrl);
     supabaseClient = createClient(supabaseUrl, supabaseAnonKey, {
         auth: {
             storage: new SafeStorage(),

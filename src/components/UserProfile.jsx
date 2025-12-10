@@ -324,6 +324,13 @@ const UserProfile = ({ user, onLogout }) => {
                 >
                     <Briefcase className="w-4 h-4" /> Sponsorship
                 </button>
+                <button
+                    onClick={() => setActiveTab('system')}
+                    className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all whitespace-nowrap ${activeTab === 'system' ? 'bg-slate-700 text-white border border-slate-600' : 'text-slate-500 hover:text-slate-300'
+                        }`}
+                >
+                    <Activity className="w-4 h-4" /> System Health
+                </button>
             </div>
 
             {/* Content */}
@@ -531,6 +538,78 @@ const UserProfile = ({ user, onLogout }) => {
                                 >
                                     Contact Sales
                                 </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === 'system' && (
+                        <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
+                            <h4 className="text-xl font-bold text-white mb-6 flex items-center gap-2"><Activity className="w-6 h-6 text-emerald-400" /> System Diagnostics</h4>
+
+                            <div className="space-y-4">
+                                {/* Supabase Status */}
+                                <div className="flex items-center justify-between p-4 bg-slate-950 rounded-lg border border-slate-800">
+                                    <div className="flex items-center gap-3">
+                                        <div className={`w-3 h-3 rounded-full ${!supabase.auth.signInWithPassword.toString().includes('mock') ? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]' : 'bg-amber-500'}`} />
+                                        <div>
+                                            <div className="font-bold text-slate-200">Supabase Connection</div>
+                                            <div className="text-xs text-slate-500">{!supabase.auth.signInWithPassword.toString().includes('mock') ? 'Live (Connected to Project)' : 'Mock Mode (Keys Missing?)'}</div>
+                                        </div>
+                                    </div>
+                                    <span className="text-xs font-mono bg-slate-900 px-2 py-1 rounded text-slate-400">auth.users</span>
+                                </div>
+
+                                {/* Gemini Status */}
+                                <div className="flex items-center justify-between p-4 bg-slate-950 rounded-lg border border-slate-800">
+                                    <div className="flex items-center gap-3">
+                                        <div className={`w-3 h-3 rounded-full ${import.meta.env.VITE_GEMINI_API_KEY ? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]' : 'bg-red-500'}`} />
+                                        <div>
+                                            <div className="font-bold text-slate-200">Gemini AI Client</div>
+                                            <div className="text-xs text-slate-500">{import.meta.env.VITE_GEMINI_API_KEY ? 'API Key Present' : 'Missing VITE_GEMINI_API_KEY'}</div>
+                                        </div>
+                                    </div>
+                                    <span className="text-xs font-mono bg-slate-900 px-2 py-1 rounded text-slate-400">gemini-1.5-flash-001</span>
+                                </div>
+
+                                <div className="p-4 bg-emerald-500/5 text-emerald-400 text-xs rounded-lg border border-emerald-500/10">
+                                    ℹ️ <strong>Environment Check:</strong> If status is yellow/red, check Vercel Project Settings > Environment Variables. Redeploy after changes.
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {activeTab === 'system' && (
+                        <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
+                            <h4 className="text-xl font-bold text-white mb-6 flex items-center gap-2"><Activity className="w-6 h-6 text-emerald-400" /> System Diagnostics</h4>
+
+                            <div className="space-y-4">
+                                {/* Supabase Status */}
+                                <div className="flex items-center justify-between p-4 bg-slate-950 rounded-lg border border-slate-800">
+                                    <div className="flex items-center gap-3">
+                                        <div className={`w-3 h-3 rounded-full ${!supabase.auth.signInWithPassword.toString().includes('mock') ? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]' : 'bg-amber-500'}`} />
+                                        <div>
+                                            <div className="font-bold text-slate-200">Supabase Connection</div>
+                                            <div className="text-xs text-slate-500">{!supabase.auth.signInWithPassword.toString().includes('mock') ? 'Live (Connected to Project)' : 'Mock Mode (Keys Missing?)'}</div>
+                                        </div>
+                                    </div>
+                                    <span className="text-xs font-mono bg-slate-900 px-2 py-1 rounded text-slate-400">auth.users</span>
+                                </div>
+
+                                {/* Gemini Status */}
+                                <div className="flex items-center justify-between p-4 bg-slate-950 rounded-lg border border-slate-800">
+                                    <div className="flex items-center gap-3">
+                                        <div className={`w-3 h-3 rounded-full ${import.meta.env.VITE_GEMINI_API_KEY ? 'bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]' : 'bg-red-500'}`} />
+                                        <div>
+                                            <div className="font-bold text-slate-200">Gemini AI Client</div>
+                                            <div className="text-xs text-slate-500">{import.meta.env.VITE_GEMINI_API_KEY ? 'API Key Present' : 'Missing VITE_GEMINI_API_KEY'}</div>
+                                        </div>
+                                    </div>
+                                    <span className="text-xs font-mono bg-slate-900 px-2 py-1 rounded text-slate-400">gemini-1.5-flash-001</span>
+                                </div>
+
+                                <div className="p-4 bg-emerald-500/5 text-emerald-400 text-xs rounded-lg border border-emerald-500/10">
+                                    ℹ️ <strong>Environment Check:</strong> If status is yellow/red, check Vercel Project Settings &gt; Environment Variables. Redeploy after changes.
+                                </div>
                             </div>
                         </div>
                     )}
