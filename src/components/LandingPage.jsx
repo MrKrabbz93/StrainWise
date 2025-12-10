@@ -31,7 +31,7 @@ const LandingPage = ({ onEnter }) => {
                     </div>
 
                     <h1 className="text-6xl md:text-8xl font-bold text-transparent bg-clip-text bg-gradient-to-b from-white via-slate-200 to-slate-500 mb-6 tracking-tight">
-                        {t('welcome.title')}<span className="text-emerald-500">Wise</span>
+                        Strain<span className="text-emerald-500">Wise</span>
                         <sup className="text-xs text-slate-500 ml-2 font-mono align-top opacity-50">v1.1</sup>
                     </h1>
                 </motion.div>
