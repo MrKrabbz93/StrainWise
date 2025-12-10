@@ -22,6 +22,12 @@ export default async function handler(req, res) {
     const { prompt, type, history = [], systemPrompt } = req.body;
     const apiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
 
+    console.log("Server Debug - API Key Check:", {
+        exists: !!apiKey,
+        length: apiKey ? apiKey.length : 0,
+        snippet: apiKey ? `${apiKey.slice(0, 4)}...` : "MISSING"
+    });
+
     if (!apiKey) {
         return res.status(500).json({ error: 'Server configuration error: Missing API Key' });
     }
