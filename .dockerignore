@@ -1,0 +1,15 @@
+node_modules
+.git
+.gitignore
+#.env
+dist
+.vercel
+npm-debug.log
+Dockerfile
+.dockerignore
+.agent
+junit.xml
+coverage
+android
+ios
+java-1.8.0-openjdk-1.8.0.392-1.b08.redhat.windows.x86_64

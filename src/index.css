@@ -1,8 +1,6 @@
 @import "tailwindcss";
 
-@theme {
-  --font-sans: 'Inter', sans-serif;
-}
+
 
 /* Custom Premium Styles */
 body {
@@ -21,4 +19,21 @@ body {
 
 ::-webkit-scrollbar-thumb {
   @apply bg-slate-800 rounded-full hover:bg-slate-700 transition-colors;
+}
+
+@keyframes marquee {
+  0% { transform: translateX(0%); }
+  100% { transform: translateX(-50%); }
+}
+
+.animate-marquee {
+  animation: marquee linear infinite;
+}
+
+.hover\:pause:hover {
+  animation-play-state: paused;
+}
+
+.group:hover .group-hover\:slow-down {
+  animation-duration: 400s !important; /* Extremely slow on hover */
 }

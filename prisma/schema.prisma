@@ -1,0 +1,61 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Strain {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  type        String   // Sativa, Indica, Hybrid
+  thc         Float?
+  cbd         Float?
+  effects     String[]
+  flavors     String[]
+  description String?
+  imageUrl    String?
+  rating      Float    @default(0)
+  reviewCount Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([name])
+  @@index([type])
+  @@index([effects])
+}
+
+model ConsultantSession {
+  id        String   @id @default(uuid())
+  userId    String?  // Optional for guest users
+  persona   String   // The Guide, The Scientist, etc.
+  startTime DateTime @default(now())
+  endTime   DateTime?
+  messages  Json[]   // Store chat history for this session
+  metadata  Json?    // Any extra context
+
+  @@index([userId])
+  @@index([startTime])
+}
+
+model UserActivity {
+  id        String   @id @default(uuid())
+  userId    String
+  action    String   // e.g., "view_strain", "chat_message", "add_favorite"
+  details   Json?
+  timestamp DateTime @default(now())
+  ipAddress String?  // For security/rate limiting analysis
+
+  @@index([userId])
+  @@index([action])
+  @@index([timestamp])
+}
+

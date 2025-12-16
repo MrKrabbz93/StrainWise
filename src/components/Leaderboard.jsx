@@ -35,7 +35,7 @@ const Leaderboard = () => {
     return (
         <div className="bg-slate-900/50 border border-white/5 rounded-xl p-6">
             <h3 className="text-xl font-bold text-white mb-6 flex items-center gap-2">
-                <Trophy className="w-6 h-6 text-emerald-400" /> Top Consultans
+                <Trophy className="w-6 h-6 text-emerald-400" /> Top Consultants
             </h3>
             <div className="space-y-4">
                 {leaders.map((leader, index) => (
@@ -45,7 +45,7 @@ const Leaderboard = () => {
                         animate={{ opacity: 1, x: 0 }}
                         transition={{ delay: index * 0.1 }}
                         className={`flex items-center gap-4 p-4 rounded-lg border transition-all ${index === 0 ? 'bg-amber-500/10 border-amber-500/30' :
-                                'bg-slate-800/50 border-slate-700 hover:border-emerald-500/20'
+                            'bg-slate-800/50 border-slate-700 hover:border-emerald-500/20'
                             }`}
                     >
                         <div className="w-8 flex justify-center">{getIcon(index)}</div>

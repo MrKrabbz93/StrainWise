@@ -1,493 +1,509 @@
-import React, { useState } from 'react';
-import { Search, BookOpen, Dna, Thermometer, Activity, Sprout, MapPin, X, Sparkles, Heart, ArrowRight, Loader2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { generateStrainEncyclopediaEntry } from '../lib/gemini';
+import { Search, FlaskConical, ArrowRight, Activity, Dna, Droplet, MapPin, Sparkles, X } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import strainsData from '../data/strains.json';
-import dispensariesData from '../data/dispensaries.json';
+import OptimizedImage from './optimized/OptimizedImage';
+import StrainReviews from './StrainReviews';
 import DispensaryMap from './DispensaryMap';
 import { getStrainImageUrl } from '../lib/images';
-import { researchStrain, generateImage } from '../lib/gemini';
-import { addXP, postStrainShoutout } from '../lib/gamification';
-import StrainReviews from './StrainReviews';
+import { getDispensariesWithStrain } from '../lib/services/dispensary.service';
+import { addXP } from '../lib/gamification';
+import dispensariesData from '../data/dispensaries.json';
 
-// CSS Visual Profiles (Fallback for Image Generation Failure)
-const visualProfiles = {
-    purple: "bg-gradient-to-br from-purple-900 via-indigo-950 to-slate-950",
-    green_sativa: "bg-gradient-to-br from-lime-900 via-emerald-950 to-slate-950",
-    frosty: "bg-gradient-to-br from-slate-700 via-slate-800 to-slate-950",
-    orange: "bg-gradient-to-br from-orange-900 via-amber-950 to-slate-950",
-    dark: "bg-gradient-to-br from-green-950 via-slate-950 to-black"
-};
-
-const StrainLibrary = () => {
+const StrainLibrary = ({ userLocation }) => {
+    // --- State ---
+    const [viewMode, setViewMode] = useState('hallway'); // 'hallway' | 'focus' | 'lab'
+    const [selectedStrain, setSelectedStrain] = useState(null);
     const [query, setQuery] = useState('');
-    const [strainData, setStrainData] = useState(null);
+
+    // Filters
+    const [activeType, setActiveType] = useState('All'); // All, Indica, Sativa, Hybrid
+    const [activeEffect, setActiveEffect] = useState(null); // Sleep, Pain, Creative, etc.
+
+    const [filteredStrains, setFilteredStrains] = useState([]); // Initialize empty
+    const [allStrains, setAllStrains] = useState([]); // Cache for client-side search if list isn't huge
     const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState(null);
     const [showMap, setShowMap] = useState(false);
     const [nearbyDispensaries, setNearbyDispensaries] = useState([]);
-    const [stockStatus, setStockStatus] = useState(null);
 
-    // Add Strain State
-    const [isAddingStrain, setIsAddingStrain] = useState(false);
-    const [newStrainForm, setNewStrainForm] = useState({ name: '', company: '' });
     const [isResearching, setIsResearching] = useState(false);
+    const [newStrainForm, setNewStrainForm] = useState({ name: '', company: '' });
 
-    const handleAddStrain = async (e) => {
-        e.preventDefault();
-        if (!newStrainForm.name) return;
+    // Fetch Strains from DB (with Filters)
+    useEffect(() => {
+        const fetchStrains = async () => {
+            setIsLoading(true);
+            let queryBuilder = supabase
+                .from('strains')
+                .select('*')
+                .limit(100);
 
-        setIsResearching(true);
-        setError(null);
+            // Apply Filters
+            if (activeType !== 'All') {
+                queryBuilder = queryBuilder.ilike('type', `%${activeType}%`);
+            }
 
-        try {
-            // 0. Check Auth
-            const { data: { user } } = await supabase.auth.getUser();
-            if (!user) {
-                alert("Please log in to add strains.");
-                setIsResearching(false);
+            // If we have an effect filter, we search description or effects column
+            // Assuming 'effects' is an array column: .contains('effects', [activeEffect])
+            // Or ilike description. Let's do simple text search for now to be safe.
+            // Note: 'cs' is contains for arrays. If column is text array. 
+            // If it's JSONB, utilize @> but straightforward text search is .textSearch usually.
+            // Falling back to JS filter for effects if DB structure is complex, 
+            // but let's try to fetch broadly then filter.
+            // For now, we fetch broadly and filter client-side for effects.
+
+            const { data, error } = await queryBuilder;
+
+            if (data) {
+                // Sort: Images first
+                let sorted = data.sort((a, b) => {
+                    const hasImageA = a.image_url && a.image_url.length > 5;
+                    const hasImageB = b.image_url && b.image_url.length > 5;
+
+                    if (hasImageA && !hasImageB) return -1;
+                    if (!hasImageA && hasImageB) return 1;
+
+                    // Randomize the rest to avoid boring A-Z every time?
+                    // User asked to avoid strict A-Z wait.
+                    // Let's shuffle slightly or use ID?
+                    // Let's just stick to alphabetical fallback but randomize if no image?
+                    // "The user has to wait... from a-z" suggests they want Variety.
+                    return 0.5 - Math.random();
+                });
+
+                // Client-side Effect Filter (safer than guessing DB schema)
+                if (activeEffect) {
+                    sorted = sorted.filter(s =>
+                        (s.effects && s.effects.includes(activeEffect)) ||
+                        (s.description && s.description.toLowerCase().includes(activeEffect.toLowerCase()))
+                    );
+                }
+
+                setAllStrains(sorted);
+                setFilteredStrains(sorted);
+            }
+            setIsLoading(false);
+        };
+        fetchStrains();
+    }, [activeType, activeEffect]); // Refetch when filters change
+
+    // Search Logic (Debounced)
+    useEffect(() => {
+        const performSearch = async () => {
+            if (query.trim().length === 0) {
+                // Restore filters
+                if (allStrains.length > 0) setFilteredStrains(allStrains);
                 return;
             }
 
-            // 1. AI Research (Deep Dive)
-            const aiData = await researchStrain(newStrainForm.name, newStrainForm.company);
-            if (!aiData) throw new Error("AI Research failed to find sufficient data.");
+            // Local Search first (fast)
+            const local = allStrains.filter(s => s.name.toLowerCase().includes(query.toLowerCase()));
+            if (local.length > 0) {
+                setFilteredStrains(local);
+                if (query.length < 4) return;
+            }
 
-            // 2. Generate Image
-            const imagePrompt = `High quality, photorealistic close-up of cannabis strain ${aiData.name}. Visual traits: ${aiData.visual_profile}. Style: Nano Banana.`;
-            const imageUrl = await generateImage(imagePrompt);
+            // Deep Server Search
+            const { data } = await supabase
+                .from('strains')
+                .select('*')
+                .ilike('name', `%${query}%`)
+                .limit(20);
 
-            // 3. Save to DB
-            const { error: dbError } = await supabase.from('strains').insert([{
-                ...aiData,
-                image_url: imageUrl, // Assuming we add this column or handle it via visual_profile map (but direct url is better for generated)
-                contributed_by: user.id
-            }]);
+            if (data) setFilteredStrains(data);
+        };
 
-            if (dbError) throw dbError;
+        const timeout = setTimeout(performSearch, 300);
+        return () => clearTimeout(timeout);
+    }, [query, allStrains]);
 
-            // 4. Gamification Rewards
-            await addXP(user.id, 150, 'Added new strain');
-            await postStrainShoutout(user.id, aiData.name);
 
-            // 5. Success UI
-            alert(`Success! You earned 150 XP for adding ${aiData.name}.`);
-            setIsAddingStrain(false);
-            setNewStrainForm({ name: '', company: '' });
-            // Optionally set query to new strain to show it immediately
-            setQuery(aiData.name);
-            handleSearch(null, aiData.name);
-
-        } catch (err) {
-            console.error(err);
-            setError("Failed to add strain. Please try again.");
-        } finally {
-            setIsResearching(false);
+    // --- Actions ---
+    const handleRandom = () => {
+        if (filteredStrains.length > 0) {
+            const random = filteredStrains[Math.floor(Math.random() * filteredStrains.length)];
+            setSelectedStrain(random);
+            setViewMode('focus');
         }
     };
 
-    const handleSearch = async (e, directQuery = null) => {
-        if (e) e.preventDefault();
-        const searchTerm = directQuery || query;
-        if (!searchTerm?.trim()) return;
+    const handleSelectStrain = (strain) => {
+        setSelectedStrain(strain);
+        setViewMode('focus');
+    };
 
-        // Update UI to match specific search if triggered by click
-        if (directQuery) setQuery(directQuery);
+    const handleBackToHallway = () => {
+        setSelectedStrain(null);
+        setViewMode('hallway');
+    };
 
-        setIsLoading(true);
-        setError(null);
-        setStrainData(null);
-        setStockStatus(null);
+    const handleFindNearby = async () => {
+        if (!selectedStrain) return;
 
+        setIsLoading(true); // Re-use loading state or add new one
         try {
-            const data = await generateStrainEncyclopediaEntry(searchTerm);
-            if (data) {
-                setStrainData(data);
+            if (userLocation?.lat && userLocation?.lng) {
+                const found = await getDispensariesWithStrain(selectedStrain.id, userLocation.lat, userLocation.lng);
+                setNearbyDispensaries(found);
             } else {
-                setError("Could not find info on this strain. Try another spelling?");
+                // Fallback to mock data if no location
+                alert("Location not detected. Showing demo data.");
+                const found = dispensariesData.slice(0, 3);
+                setNearbyDispensaries(found);
             }
+            setShowMap(true);
         } catch (err) {
-            setError("An error occurred while fetching the data.");
+            console.error(err);
+            alert("Failed to locate dispensaries.");
         } finally {
             setIsLoading(false);
         }
     };
 
-    const handleFindNearby = () => {
-        if (!strainData) return;
-        const localStrain = strainsData.find(s => s.name.toLowerCase() === strainData.name.toLowerCase());
+    // --- Lab Handlers (Simplified) ---
+    const handleAddStrain = async (e) => {
+        e.preventDefault();
+        if (!newStrainForm.name) return;
+        setIsResearching(true);
+        try {
+            const { data: { user } } = await supabase.auth.getUser();
+            if (!user) throw new Error("Login required");
 
-        if (!localStrain) {
-            setStockStatus('not-found');
-            return;
-        }
+            const { data: { session } } = await supabase.auth.getSession();
+            const token = session?.access_token;
 
-        const found = dispensariesData.filter(d => d.inventory.includes(localStrain.id));
+            // Enqueue Job
+            const res = await fetch('/api/jobs', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    type: 'research_strain',
+                    payload: {
+                        strainName: newStrainForm.name,
+                        companyName: newStrainForm.company
+                    }
+                })
+            });
 
-        if (found.length > 0) {
-            setNearbyDispensaries(found);
-            setShowMap(true);
-            setStockStatus('found');
-        } else {
-            setStockStatus('not-found');
+            if (!res.ok) throw new Error("Failed to queue research job.");
+            const { msg_id } = await res.json();
+
+            // Poll Loop
+            let attempts = 0;
+            let aiData = null;
+            while (attempts < 30 && !aiData) { // 45s max
+                await new Promise(r => setTimeout(r, 1500));
+                const statusRes = await fetch(`/api/jobs?id=${msg_id}`, {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+
+                if (statusRes.ok) {
+                    const job = await statusRes.json();
+                    if (job.status === 'completed') aiData = job.result;
+                    else if (job.status === 'failed') throw new Error(job.error_message || "Analysis failed.");
+                }
+                attempts++;
+            }
+
+            if (!aiData) throw new Error("Research timed out.");
+
+            await addXP(user.id, 150, 'Added new strain');
+            alert(`Success! Added ${aiData.name}`);
+            setNewStrainForm({ name: '', company: '' });
+            setViewMode('hallway');
+        } catch (err) {
+            alert(err.message);
+        } finally {
+            setIsResearching(false);
         }
     };
 
+    // --- Lab Handlers (Simplified) ---
+    const handleSearch = async (e) => {
+        e.preventDefault();
+        // The useEffect above handles the actual search logic as query changes.
+        // This handler just ensures we don't submit default form.
+        if (!query.trim()) return;
+
+        // If we have filtered results, select the first one on enter?
+        if (filteredStrains.length > 0) {
+            setSelectedStrain(filteredStrains[0]);
+            setViewMode('focus');
+        }
+    };
+
+
+
+    // --- Render ---
     return (
-        <div className="max-w-4xl mx-auto p-6 relative">
-            {/* Header / Hero Section */}
-            <div className="text-center mb-16 relative">
-                {/* Decorative background blur */}
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[300px] bg-emerald-500/10 blur-[120px] rounded-full pointer-events-none" />
-
-                <h2 className="text-5xl md:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white via-emerald-100 to-slate-400 mb-6 tracking-tight drop-shadow-sm">
-                    Strain Encyclopedia
-                </h2>
-                <p className="text-slate-400 text-lg max-w-2xl mx-auto leading-relaxed">
-                    Explore the world's most comprehensive, AI-verified database of cannabis cultivars.
-                </p>
+        <div className="relative w-full h-screen overflow-hidden bg-slate-950 text-slate-200">
+            {/* Ambient Background */}
+            <div className="fixed inset-0 z-0 pointer-events-none">
+                <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-purple-900/20 blur-[120px] rounded-full" />
+                <div className="absolute bottom-[-10%] right-[-10%] w-[50%] h-[50%] bg-emerald-900/20 blur-[120px] rounded-full" />
+                <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-5" />
             </div>
 
-            {/* Floating Search Bar */}
-            <motion.form
-                initial={{ y: 20, opacity: 0 }}
-                animate={{ y: 0, opacity: 1 }}
-                onSubmit={handleSearch}
-                className="mb-16 relative max-w-2xl mx-auto group"
-            >
-                <div className="absolute inset-0 bg-gradient-to-r from-emerald-500/20 to-cyan-500/20 rounded-full blur-xl opacity-20 group-hover:opacity-40 transition-opacity duration-500" />
-                <div className="relative bg-slate-950/80 backdrop-blur-xl border border-white/10 rounded-full p-2 flex items-center shadow-2xl ring-1 ring-white/5 group-focus-within:ring-emerald-500/50 transition-all">
-                    <Search className="w-6 h-6 text-slate-500 ml-4 mr-3 group-focus-within:text-emerald-400 transition-colors" />
-                    <input
-                        type="text"
-                        value={query}
-                        onChange={(e) => setQuery(e.target.value)}
-                        placeholder="Search strains (e.g., 'Gelato #41')..."
-                        id="strain-search-input"
-                        name="strainSearch"
-                        className="w-full bg-transparent text-lg text-slate-100 placeholder-slate-500 focus:outline-none h-12"
-                    />
-                    <button
-                        type="submit"
-                        disabled={isLoading}
-                        className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 px-8 py-3 rounded-full font-bold text-sm transition-all transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:hover:scale-100 shadow-lg shadow-emerald-500/20"
-                    >
-                        {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : 'Search'}
-                    </button>
-                </div>
-            </motion.form>
+            {/* Header / Nav */}
+            <div className="absolute top-0 left-0 right-0 z-50 p-6 flex flex-col gap-4 bg-gradient-to-b from-slate-950 via-slate-950/80 to-transparent pb-12">
 
-            {/* Add Strain Button */}
-            <div className="text-center mb-8">
-                <button
-                    onClick={() => setIsAddingStrain(!isAddingStrain)}
-                    className="text-xs text-emerald-400 hover:text-emerald-300 underline underline-offset-4"
-                >
-                    {isAddingStrain ? "Cancel Contribution" : "Can't find a strain? Add it to the Encyclopedia"}
-                </button>
-            </div>
+                <div className="flex justify-between items-center">
+                    <h2 className="text-2xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-cyan-400">
+                        STRAINWISE <span className="text-slate-500 font-thin">ARCHIVES</span>
+                    </h2>
 
-            {/* Add Strain Form */}
-            <AnimatePresence>
-                {isAddingStrain && (
-                    <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        exit={{ opacity: 0, height: 0 }}
-                        className="max-w-xl mx-auto mb-12 bg-slate-900/80 border border-emerald-500/30 rounded-2xl p-6 backdrop-blur-md overflow-hidden"
-                    >
-                        <h3 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
-                            <Sprout className="w-5 h-5 text-emerald-400" /> Contribute to the Hive Mind
-                        </h3>
-                        <form onSubmit={handleAddStrain} className="space-y-4">
-                            <div>
-                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Strain Name</label>
+                    <div className="flex items-center gap-4">
+                        <form onSubmit={handleSearch} className="relative group hidden md:block">
+                            <div className="absolute inset-0 bg-emerald-500/20 blur-md rounded-full opacity-0 group-focus-within:opacity-100 transition-opacity" />
+                            <div className="relative flex items-center bg-slate-900/80 border border-white/10 rounded-full px-4 py-2 ring-1 ring-white/5 group-focus-within:ring-emerald-500/50">
+                                <Search className="w-4 h-4 text-slate-500 mr-2" />
                                 <input
-                                    type="text"
-                                    value={newStrainForm.name}
-                                    onChange={(e) => setNewStrainForm({ ...newStrainForm, name: e.target.value })}
-                                    placeholder="e.g. Blue Dream"
-                                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white focus:border-emerald-500 outline-none"
+                                    value={query}
+                                    onChange={(e) => setQuery(e.target.value)}
+                                    placeholder="Search..."
+                                    className="bg-transparent border-none outline-none text-sm w-48 text-white placeholder-slate-600"
                                 />
                             </div>
-                            <div>
-                                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Breeder / Company (Optional)</label>
-                                <input
-                                    type="text"
-                                    value={newStrainForm.company}
-                                    onChange={(e) => setNewStrainForm({ ...newStrainForm, company: e.target.value })}
-                                    placeholder="e.g. Humboldt Seed Co."
-                                    className="w-full bg-slate-950 border border-slate-700 rounded-lg p-3 text-white focus:border-emerald-500 outline-none"
-                                />
-                            </div>
-                            <div className="bg-emerald-500/10 border border-emerald-500/20 p-3 rounded-lg text-xs text-emerald-300">
-                                ℹ️  Our AI Agent will perform a simulation of deep web research to gather lineage, effects, and medical info. You will earn <strong>150 XP</strong>.
-                            </div>
-                            <button
-                                type="submit"
-                                disabled={isResearching || !newStrainForm.name}
-                                className="w-full bg-emerald-500 hover:bg-emerald-400 disabled:opacity-50 text-slate-950 font-bold py-3 rounded-lg flex items-center justify-center gap-2 transition-colors"
-                            >
-                                {isResearching ? (
-                                    <>
-                                        <Activity className="w-4 h-4 animate-spin" /> Researching & Generating...
-                                    </>
-                                ) : (
-                                    <>
-                                        <Sparkles className="w-4 h-4" /> Start AI Data Mining
-                                    </>
-                                )}
-                            </button>
                         </form>
-                    </motion.div>
-                )}
-            </AnimatePresence>
 
-            {/* Browse Categories & Featured Section - Only show when no search/result */}
-            {!strainData && (
-                <motion.div
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    transition={{ duration: 0.5 }}
-                    className="space-y-12"
-                >
-                    {/* Browse by Effect */}
-                    <div>
-                        <h3 className="text-xl font-bold text-slate-200 mb-6 flex items-center gap-2">
-                            <Sparkles className="w-5 h-5 text-emerald-400" />
-                            Browse by Vibe
-                        </h3>
-                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                            {[
-                                { name: "Relax & Sleep", id: "sleep", color: "bg-purple-900/50", border: "border-purple-500/20", icon: "🌙" },
-                                { name: "Focus & Creative", id: "creative", color: "bg-cyan-900/50", border: "border-cyan-500/20", icon: "💡" },
-                                { name: "Relief & Pain", id: "pain", color: "bg-red-900/50", border: "border-red-500/20", icon: "❤️" },
-                                { name: "Social & Fun", id: "happy", color: "bg-amber-900/50", border: "border-amber-500/20", icon: "🎉" }
-                            ].map((category) => (
-                                <button
-                                    key={category.id}
-                                    onClick={() => handleSearch(null, category.id)}
-                                    className={`p-6 rounded-2xl border ${category.border} ${category.color} hover:scale-105 active:scale-95 transition-all text-left group`}
-                                >
-                                    <span className="text-2xl mb-2 block group-hover:scale-110 transition-transform">{category.icon}</span>
-                                    <span className="font-bold text-slate-200 text-sm md:text-base">{category.name}</span>
-                                </button>
-                            ))}
-                        </div>
+                        <button
+                            onClick={handleRandom}
+                            className="p-2 rounded-full bg-slate-900/50 hover:bg-purple-500/20 text-slate-400 hover:text-purple-400 transition-colors border border-white/5"
+                            title="Feeling Lucky?"
+                        >
+                            <Sparkles className="w-5 h-5" />
+                        </button>
+
+                        <button
+                            onClick={() => setViewMode(viewMode === 'lab' ? 'hallway' : 'lab')}
+                            className="p-2 rounded-full bg-slate-900/50 hover:bg-emerald-500/20 text-slate-400 hover:text-emerald-400 transition-colors border border-white/5"
+                            title="Enter the Lab"
+                        >
+                            <FlaskConical className="w-5 h-5" />
+                        </button>
                     </div>
+                </div>
 
-                    {/* Featured Strains Grid */}
-                    <div>
-                        <h3 className="text-xl font-bold text-slate-200 mb-6 flex items-center gap-2">
-                            <BookOpen className="w-5 h-5 text-emerald-400" />
-                            Featured Strains
-                        </h3>
-                        <div className="grid md:grid-cols-2 gap-6">
-                            {strainsData.slice(0, 6).map((strain) => (
-                                <motion.div
-                                    key={strain.id}
-                                    whileHover={{ y: -5 }}
-                                    onClick={() => handleSearch(null, strain.name)}
-                                    className="bg-slate-900 border border-white/5 rounded-2xl overflow-hidden cursor-pointer group hover:shadow-[0_0_30px_rgba(16,185,129,0.1)] transition-all"
-                                >
-                                    <div className={`h-32 w-full relative overflow-hidden ${visualProfiles[strain.visual_profile] || visualProfiles.green_sativa}`}>
-                                        <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-20 mix-blend-overlay" />
-                                        <div className="absolute inset-0 bg-gradient-to-t from-slate-900 to-transparent" />
-                                        <div className="absolute bottom-4 left-4">
-                                            <h4 className="font-bold text-white text-lg">{strain.name}</h4>
-                                            <span className="text-xs text-slate-300 opacity-80">{strain.type}</span>
-                                        </div>
-                                        <div className="absolute top-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <div className="bg-slate-950/50 backdrop-blur-md p-2 rounded-full border border-white/10">
-                                                <ArrowRight className="w-4 h-4 text-white" />
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="p-4">
-                                        <p className="text-sm text-slate-400 line-clamp-2">{strain.description}</p>
-                                        <div className="flex gap-2 mt-3">
-                                            {strain.effects.slice(0, 2).map((e, i) => (
-                                                <span key={i} className="text-[10px] uppercase tracking-wider px-2 py-1 bg-white/5 rounded text-slate-500 border border-white/5">
-                                                    {e}
-                                                </span>
-                                            ))}
-                                        </div>
-                                    </div>
-                                </motion.div>
-                            ))}
-                        </div>
-                    </div>
-                </motion.div>
-            )}
+                {/* Filters */}
+                <div className="flex flex-wrap items-center gap-2 md:gap-4 overflow-x-auto pb-2 scrollbar-hide">
+                    {['All', 'Indica', 'Sativa', 'Hybrid'].map(type => (
+                        <button
+                            key={type}
+                            onClick={() => { setActiveType(type); setActiveEffect(null); }}
+                            className={`px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all whitespace-nowrap ${activeType === type
+                                    ? 'bg-emerald-500 text-slate-950 shadow-[0_0_15px_rgba(16,185,129,0.4)]'
+                                    : 'bg-slate-900/50 text-slate-500 border border-white/5 hover:text-emerald-400'
+                                }`}
+                        >
+                            {type}
+                        </button>
+                    ))}
+                    <div className="w-px h-6 bg-slate-800 mx-2 hidden md:block" />
+                    {['Sleep', 'Pain', 'Creative', 'Focus', 'Energy'].map(effect => (
+                        <button
+                            key={effect}
+                            onClick={() => { setActiveEffect(activeEffect === effect ? null : effect); }} // Toggle
+                            className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all whitespace-nowrap flex items-center gap-1 ${activeEffect === effect
+                                    ? 'bg-blue-500/20 border-blue-500 text-blue-400'
+                                    : 'bg-transparent border-slate-800 text-slate-500 hover:border-slate-600'
+                                }`}
+                        >
+                            {activeEffect === effect && <Activity className="w-3 h-3" />}
+                            {effect}
+                        </button>
+                    ))}
+                </div>
+            </div>
 
+            {/* MAIN CONTENT AREA */}
             <AnimatePresence mode="wait">
-                {error && (
-                    <motion.div
-                        initial={{ opacity: 0, y: 10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0 }}
-                        className="text-center text-red-400 bg-red-500/10 p-4 rounded-lg border border-red-500/20"
-                    >
-                        {error}
-                    </motion.div>
+
+                {/* 1. HALLWAY VIEW (Infinite Carousel) */}
+                {viewMode === 'hallway' && (
+                    <div className="relative z-10 w-full h-full flex items-center overflow-hidden group">
+                        {/* Gradient Masks for smooth fade out at edges */}
+                        <div className="absolute left-0 top-0 bottom-0 w-32 bg-gradient-to-r from-slate-950 to-transparent z-20" />
+                        <div className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-slate-950 to-transparent z-20" />
+
+                        <div
+                            className="flex gap-12 items-center animate-marquee group-hover:slow-down will-change-transform"
+                            style={{
+                                width: "fit-content",
+                                paddingLeft: "50vw",
+                                animationDuration: `${Math.max(120, filteredStrains.length * 40)}s`
+                            }}
+                        >
+                            {/* Duplicate list for seamless loop if we have enough items, otherwise just center */}
+                            {[...filteredStrains, ...filteredStrains, ...filteredStrains].map((strain, index) => (
+                                <StrainCard3D
+                                    key={`${strain.id}-${index}`}
+                                    strain={strain}
+                                    onClick={() => handleSelectStrain(strain)}
+                                />
+                            ))}
+
+                            {filteredStrains.length === 0 && (
+                                <div className="text-slate-500 text-lg w-96 text-center">
+                                    No strains found. Check spelling or visit the Lab.
+                                </div>
+                            )}
+                        </div>
+                    </div>
                 )}
 
-                {strainData && (
+                {/* 2. FOCUS VIEW (The Brain) */}
+                {viewMode === 'focus' && selectedStrain && (
+
                     <motion.div
-                        key="result"
-                        initial={{ opacity: 0, y: 20 }}
+                        key="focus"
+                        initial={{ opacity: 0, y: 50 }}
                         animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -20 }}
-                        className="bg-slate-900/80 backdrop-blur-xl border border-white/10 rounded-2xl overflow-hidden shadow-2xl relative"
+                        exit={{ opacity: 0, y: 50 }}
+                        className="fixed inset-0 z-[60] bg-slate-950/95 backdrop-blur-3xl flex items-center justify-center p-4 md:p-12 overflow-y-auto"
                     >
-                        {/* Visual Profile Header (Dynamic Image) */}
-                        <div className="h-64 w-full relative overflow-hidden">
-                            <img
-                                src={getStrainImageUrl(strainData)}
-                                alt={strainData.name}
-                                className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 hover:scale-105"
-                            />
-                            <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/40 to-transparent z-10" />
+                        <button
+                            onClick={handleBackToHallway}
+                            className="absolute top-8 left-8 z-50 text-slate-400 hover:text-white flex items-center gap-2 bg-slate-900/50 px-4 py-2 rounded-full border border-white/5 transition-all hover:bg-emerald-500/20"
+                        >
+                            <ArrowRight className="w-5 h-5 rotate-180" /> Back to Archives
+                        </button>
 
-                            <div className="absolute top-6 right-6 z-30 flex gap-3">
-                                <button
-                                    onClick={async () => {
-                                        // Check if logged in (simple check for demo)
-                                        const { data: { user } } = await supabase.auth.getUser();
-                                        if (!user) {
-                                            alert("Please sign in to save favorites.");
-                                            return;
-                                        }
+                        <div className="max-w-5xl w-full grid md:grid-cols-[400px_1fr] gap-12 items-center">
+                            {/* Left: Visual */}
+                            <motion.div
+                                initial={{ x: -50, opacity: 0 }}
+                                animate={{ x: 0, opacity: 1 }}
+                                transition={{ delay: 0.2 }}
+                                className="relative aspect-square rounded-[2rem] overflow-hidden shadow-2xl border border-white/10 group bg-slate-900"
+                            >
+                                <OptimizedImage
+                                    src={getStrainImageUrl(selectedStrain)}
+                                    alt={selectedStrain.name}
+                                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
+                                />
+                                <div className="absolute inset-0 bg-gradient-to-tr from-black/80 via-transparent to-transparent" />
 
-                                        // Save to Supabase (or Mock LocalStorage)
-                                        const { error } = await supabase.from('favorites').insert([
-                                            {
-                                                user_id: user.id,
-                                                strain_name: strainData.name,
-                                                visual_profile: strainData.visual_profile,
-                                                type: strainData.type
-                                            }
-                                        ]);
-
-                                        if (!error) {
-                                            alert(`Saved ${strainData.name} to your favorites!`);
-                                        }
-                                    }}
-                                    className="p-3 bg-slate-950/30 backdrop-blur-md rounded-full text-white/70 hover:text-red-400 hover:bg-slate-950/50 transition-all border border-white/10 group"
-                                >
-                                    <Heart className="w-6 h-6 group-hover:fill-red-400 group-hover:text-red-400 transition-colors" />
-                                </button>
-                            </div>
-
-                            <div className="absolute bottom-0 left-0 p-8 z-20">
-                                <div className="flex items-center gap-2 mb-2">
-                                    <Sparkles className="w-5 h-5 text-emerald-400" />
-                                    <span className="text-xs font-bold uppercase tracking-wider text-emerald-400">Visual Profile: {strainData.visual_profile.replace('_', ' ')}</span>
-                                </div>
-                                <h3 className="text-4xl font-bold text-white mb-2 flex items-center gap-3">
-                                    {strainData.name}
-                                    {strainData.id && (
-                                        <span className="text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2 py-1 rounded-full flex items-center gap-1" title="Verified in Encyclopedia">
-                                            <Sparkles className="w-3 h-3" /> Verified
-                                        </span>
-                                    )}
-                                </h3>
-                                <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider border ${strainData.type.toLowerCase().includes('sativa') ? 'border-orange-500/30 text-orange-400 bg-orange-500/10' :
-                                    strainData.type.toLowerCase().includes('indica') ? 'border-purple-500/30 text-purple-400 bg-purple-500/10' :
-                                        'border-emerald-500/30 text-emerald-400 bg-emerald-500/10'
-                                    }`}>
-                                    {strainData.type}
-                                </span>
-                            </div>
-                        </div>
-
-                        <div className="p-8">
-                            {/* Find Nearby Button */}
-                            <div className="absolute top-8 right-8 z-30">
-                                <button
-                                    onClick={handleFindNearby}
-                                    className="flex items-center gap-2 bg-emerald-500/90 backdrop-blur-md text-slate-950 font-bold px-4 py-2 rounded-lg hover:bg-emerald-400 transition-colors shadow-lg"
-                                >
-                                    <MapPin className="w-4 h-4" />
-                                    Find Nearby
-                                </button>
-                                {stockStatus === 'not-found' && (
-                                    <motion.div
-                                        initial={{ opacity: 0, y: 5 }}
-                                        animate={{ opacity: 1, y: 0 }}
-                                        className="absolute top-full right-0 mt-2 w-48 text-xs text-orange-400 bg-slate-950/90 border border-orange-500/20 p-2 rounded text-center backdrop-blur-md"
-                                    >
-                                        Not currently in stock at partner locations.
-                                    </motion.div>
-                                )}
-                            </div>
-
-                            <div className="flex flex-col md:flex-row gap-8 mb-8 border-b border-white/10 pb-8">
-                                <div className="flex-1">
-                                    <p className="text-slate-300 leading-relaxed text-lg">{strainData.description}</p>
-                                </div>
-                                <div className="md:w-1/3 space-y-4">
-                                    <div className="bg-slate-800/50 p-4 rounded-xl border border-white/5">
-                                        <div className="text-xs text-slate-500 uppercase tracking-wider mb-1 flex items-center gap-2">
-                                            <Dna className="w-3 h-3" /> Lineage
-                                        </div>
-                                        <div className="font-medium text-slate-200">{strainData.lineage}</div>
+                                <div className="absolute bottom-6 left-6">
+                                    <div className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider mb-2 border bg-black/50 backdrop-blur-md ${selectedStrain.type.includes('Sativa') ? 'border-orange-500/50 text-orange-400' : 'border-purple-500/50 text-purple-400'}`}>
+                                        {selectedStrain.type}
                                     </div>
-                                    <div className="bg-slate-800/50 p-4 rounded-xl border border-white/5">
-                                        <div className="text-xs text-slate-500 uppercase tracking-wider mb-1 flex items-center gap-2">
-                                            <Activity className="w-3 h-3" /> THC Content
-                                        </div>
-                                        <div className="font-medium text-emerald-400 text-xl">{strainData.thc}</div>
+                                    <h1 className="text-4xl font-black text-white leading-none mb-1">{selectedStrain.name}</h1>
+                                    <div className="flex gap-2">
+                                        {selectedStrain.effects?.slice(0, 3).map(e => (
+                                            <span key={e} className="text-xs font-medium text-slate-300">#{e}</span>
+                                        ))}
                                     </div>
                                 </div>
-                            </div>
+                            </motion.div>
 
-                            <div className="grid md:grid-cols-3 gap-6">
-                                <div className="space-y-3">
-                                    <h4 className="text-sm font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
-                                        <Thermometer className="w-4 h-4" /> Terpenes
+                            {/* Right: Data */}
+                            <motion.div
+                                initial={{ x: 50, opacity: 0 }}
+                                animate={{ x: 0, opacity: 1 }}
+                                transition={{ delay: 0.3 }}
+                                className="space-y-8"
+                            >
+                                <div>
+                                    <h3 className="text-emerald-400 font-mono text-sm mb-2">/// GENETIC DATA</h3>
+                                    <p className="text-xl leading-relaxed text-slate-300 font-light">
+                                        {selectedStrain.description || "A mysterious strain with potent effects..."}
+                                    </p>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="bg-slate-900/50 p-6 rounded-2xl border border-white/5">
+                                        <div className="flex items-center gap-2 text-slate-500 mb-2">
+                                            <Activity className="w-4 h-4" /> THC
+                                        </div>
+                                        <div className="text-3xl font-bold text-white">{selectedStrain.thc}</div>
+                                    </div>
+                                    <div className="bg-slate-900/50 p-6 rounded-2xl border border-white/5">
+                                        <div className="flex items-center gap-2 text-slate-500 mb-2">
+                                            <Dna className="w-4 h-4" /> Lineage
+                                        </div>
+                                        <div className="text-lg font-bold text-white truncate">{selectedStrain.lineage || "Unknown"}</div>
+                                    </div>
+                                </div>
+
+                                <div className="space-y-4">
+                                    <h4 className="flex items-center gap-2 text-slate-400 font-bold uppercase text-xs tracking-wider">
+                                        <Droplet className="w-4 h-4" /> Terpene Profile
                                     </h4>
                                     <div className="flex flex-wrap gap-2">
-                                        {strainData.terpenes.map(t => (
-                                            <span key={t} className="px-3 py-1.5 bg-blue-500/10 text-blue-300 border border-blue-500/20 rounded-lg text-sm">
+                                        {selectedStrain.terpenes?.map(t => (
+                                            <span key={t} className="px-4 py-2 rounded-lg bg-blue-500/10 text-blue-300 border border-blue-500/20 text-sm">
                                                 {t}
                                             </span>
                                         ))}
                                     </div>
                                 </div>
 
-                                <div className="space-y-3">
-                                    <h4 className="text-sm font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
-                                        <BookOpen className="w-4 h-4" /> Effects
-                                    </h4>
-                                    <div className="flex flex-wrap gap-2">
-                                        {strainData.effects.map(e => (
-                                            <span key={e} className="px-3 py-1.5 bg-emerald-500/10 text-emerald-300 border border-emerald-500/20 rounded-lg text-sm">
-                                                {e}
-                                            </span>
-                                        ))}
-                                    </div>
+                                <div className="pt-8 flex gap-4">
+                                    <button
+                                        onClick={handleFindNearby}
+                                        className="flex-1 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-4 rounded-xl shadow-[0_0_20px_rgba(16,185,129,0.3)] transition-all transform hover:scale-[1.02]"
+                                    >
+                                        <div className="flex items-center justify-center gap-2">
+                                            <MapPin className="w-5 h-5" /> Locate Nearby
+                                        </div>
+                                    </button>
+                                    <button className="px-6 py-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-white border border-white/5 transition-colors">
+                                        <Sparkles className="w-5 h-5" /> Gen Art
+                                    </button>
                                 </div>
 
-                                <div className="space-y-3">
-                                    <h4 className="text-sm font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
-                                        <Sprout className="w-4 h-4" /> Growing
-                                    </h4>
-                                    <p className="text-sm text-slate-300 bg-slate-800/30 p-3 rounded-lg border border-white/5">
-                                        {strainData.growing}
-                                    </p>
+                                {/* Integrated Reviews */}
+                                <div className="pt-8 border-t border-white/5">
+                                    <StrainReviews strainName={selectedStrain.name} />
                                 </div>
-                            </div>
-                        </div>
-
-
-                        {/* Reviews Section Integration */}
-                        <div className="px-8 pb-8">
-                            <StrainReviews strainName={strainData.name} />
+                            </motion.div>
                         </div>
                     </motion.div>
                 )}
+
+                {/* 3. LAB VIEW (Simplified) */}
+                {viewMode === 'lab' && (
+                    <motion.div
+                        key="lab"
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        className="fixed inset-0 z-40 bg-slate-950 flex items-center justify-center p-4"
+                    >
+                        <button
+                            onClick={handleBackToHallway}
+                            className="absolute top-8 right-8 p-2 rounded-full bg-slate-800 hover:bg-slate-700 text-white"
+                        >
+                            <X className="w-6 h-6" />
+                        </button>
+                        <div className="max-w-md w-full text-center space-y-8">
+                            <div className="w-20 h-20 bg-emerald-500/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                                <FlaskConical className="w-10 h-10 text-emerald-400" />
+                            </div>
+                            <h2 className="text-4xl font-black text-white">The Discovery Lab</h2>
+                            <p className="text-slate-400">Identify and archive unknown strains using our AI Researcher.</p>
+
+                            <form onSubmit={handleAddStrain} className="space-y-4 text-left">
+                                <input
+                                    className="w-full bg-slate-900 border border-slate-700 rounded-xl p-4 text-white focus:border-emerald-500 outline-none"
+                                    placeholder="Strain Name (e.g. Alien Cookies)"
+                                    value={newStrainForm.name}
+                                    onChange={e => setNewStrainForm({ ...newStrainForm, name: e.target.value })}
+                                />
+                                <button
+                                    disabled={isResearching}
+                                    className="w-full bg-gradient-to-r from-emerald-500 to-cyan-500 text-slate-950 font-bold py-4 rounded-xl shadow-lg hover:shadow-emerald-500/20 transition-all disabled:opacity-50"
+                                >
+                                    {isResearching ? "Synthesizing Data..." : "Run Analysis & Archive"}
+                                </button>
+                            </form>
+                        </div>
+                    </motion.div>
+                )}
+
             </AnimatePresence>
 
             {/* Map Modal */}
@@ -497,30 +513,58 @@ const StrainLibrary = () => {
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm"
+                        className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md"
                         onClick={() => setShowMap(false)}
                     >
-                        <motion.div
-                            initial={{ scale: 0.9, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.9, opacity: 0 }}
-                            className="bg-slate-900 border border-slate-800 w-full max-w-3xl h-[600px] rounded-2xl overflow-hidden relative shadow-2xl"
-                            onClick={e => e.stopPropagation()}
-                        >
-                            <button
-                                onClick={() => setShowMap(false)}
-                                className="absolute top-4 right-4 z-10 p-2 bg-slate-950/50 text-slate-400 hover:text-white rounded-full backdrop-blur-md transition-colors"
-                            >
-                                <X className="w-5 h-5" />
-                            </button>
-                            <div className="h-full w-full">
-                                <DispensaryMap dispensaries={nearbyDispensaries} />
-                            </div>
-                        </motion.div>
+                        <div className="w-full max-w-4xl h-[80vh] bg-slate-900 rounded-3xl overflow-hidden relative border border-slate-800" onClick={e => e.stopPropagation()}>
+                            <button onClick={() => setShowMap(false)} className="absolute top-4 right-4 z-10 p-2 bg-black/50 text-white rounded-full"><X /></button>
+                            <DispensaryMap dispensaries={nearbyDispensaries} />
+                        </div>
                     </motion.div>
                 )}
             </AnimatePresence>
-        </div >
+        </div>
+    );
+};
+
+// --- Sub-Components ---
+
+const StrainCard3D = ({ strain, onClick }) => {
+    return (
+        <motion.div
+            layoutId={`card-${strain.id}`}
+            onClick={onClick}
+            whileHover={{ scale: 1.1, y: -20, rotateY: 5 }}
+            className="flex-shrink-0 w-72 h-96 relative group cursor-pointer perspective-1000"
+        >
+            <div className="absolute inset-0 bg-gradient-to-br from-slate-900 to-black rounded-3xl border border-white/10 shadow-2xl overflow-hidden transform transition-transform duration-500 hover:shadow-[0_0_50px_rgba(16,185,129,0.3)]">
+                {/* Image Background */}
+                <div className="absolute inset-0 opacity-100 transition-transform duration-700 group-hover:scale-110">
+                    <OptimizedImage
+                        src={getStrainImageUrl(strain)}
+                        alt={strain.name}
+                        className="w-full h-full object-cover"
+                    />
+                </div>
+
+                {/* Gradient Overlay - Subtle at bottom for text readability */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-90" />
+
+                {/* Content */}
+                <div className="absolute bottom-0 left-0 p-6 w-full">
+                    <span className="text-[10px] uppercase font-bold tracking-widest text-emerald-400 mb-2 block">
+                        {strain.type}
+                    </span>
+                    <h3 className="text-3xl font-black text-white leading-none mb-1 group-hover:text-emerald-300 transition-colors">
+                        {strain.name}
+                    </h3>
+                    <div className="h-1 w-12 bg-emerald-500 rounded-full my-3 group-hover:w-full transition-all duration-500" />
+                    <p className="text-xs text-slate-400 line-clamp-2 opacity-0 group-hover:opacity-100 transition-opacity delay-100 transform translate-y-4 group-hover:translate-y-0">
+                        {strain.description}
+                    </p>
+                </div>
+            </div>
+        </motion.div>
     );
 };
 

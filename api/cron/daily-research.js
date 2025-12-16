@@ -11,10 +11,11 @@ export default async function handler(req, res) {
     const geminiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
     const tavilyKey = process.env.TAVILY_API_KEY;
 
-    if (!supabaseUrl || !supabaseKey || !geminiKey || !tavilyKey) {
-        console.error("Missing Secrets: Check SUPABASE_SERVICE_ROLE_KEY, GEMINI_API_KEY, and TAVILY_API_KEY");
+    if (!supabaseUrl || !supabaseKey || !geminiKey) {
+        console.error("Missing Secrets: Check SUPABASE_SERVICE_ROLE_KEY and GEMINI_API_KEY");
         return res.status(500).json({ error: "Missing Server-Side Credentials" });
     }
+    if (!tavilyKey) console.warn("Optional: TAVILY_API_KEY missing. Daily research will be limited.");
 
     const supabase = createClient(supabaseUrl, supabaseKey);
     const genAI = new GoogleGenerativeAI(geminiKey);

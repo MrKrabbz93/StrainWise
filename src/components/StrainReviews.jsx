@@ -25,10 +25,7 @@ const StrainReviews = ({ strainName }) => {
         setIsLoading(true);
         const { data, error } = await supabase
             .from('reviews')
-            .select(`
-                *,
-                profiles:user_id (email, avatar_url)
-            `)
+            .select('*')
             .eq('strain_name', strainName)
             .order('created_at', { ascending: false });
 

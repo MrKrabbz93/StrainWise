@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { X, Mail, Lock, Loader2, LogIn } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { generateWelcomeMessage } from '../lib/gemini';
+import { analytics } from '../lib/analytics';
 
 const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
     const [isLogin, setIsLogin] = useState(true);
@@ -33,11 +34,19 @@ const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
             if (result.error) throw result.error;
 
             if (isLogin) {
+                // Identify and Track Login
+                analytics.identify(result.data.user.id, { email: result.data.user.email });
+                analytics.track('logged_in');
+
                 onLoginSuccess(result.data.user);
                 onClose();
             } else {
                 // Signup Success Logic
                 const newUser = result.data.user;
+
+                // Identify and Track Sign Up
+                analytics.identify(newUser.id, { email: email });
+                analytics.track('signed_up', { method: 'email' });
 
                 // Generate AI Welcome Message
                 try {

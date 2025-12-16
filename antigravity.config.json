@@ -1,0 +1,81 @@
+{
+    "name": "strainwise",
+    "version": "2.0.0",
+    "deployment": {
+        "strategy": "canary",
+        "stages": [
+            {
+                "name": "canary",
+                "trafficPercentage": 10,
+                "duration": "24h",
+                "metrics": {
+                    "errorRate": {
+                        "threshold": 0.01,
+                        "comparison": "greater-than"
+                    },
+                    "responseTime": {
+                        "threshold": 500,
+                        "comparison": "greater-than"
+                    },
+                    "circuitBreakerOpens": {
+                        "threshold": 5,
+                        "comparison": "greater-than"
+                    }
+                }
+            },
+            {
+                "name": "partial",
+                "trafficPercentage": 50,
+                "duration": "48h",
+                "metrics": {
+                    "errorRate": {
+                        "threshold": 0.01,
+                        "comparison": "greater-than"
+                    },
+                    "responseTime": {
+                        "threshold": 500,
+                        "comparison": "greater-than"
+                    }
+                }
+            },
+            {
+                "name": "full",
+                "trafficPercentage": 100,
+                "duration": "permanent"
+            }
+        ]
+    },
+    "resources": {
+        "canary": {
+            "cpu": "0.5",
+            "memory": "512Mi",
+            "instances": 1
+        },
+        "partial": {
+            "cpu": "1",
+            "memory": "1Gi",
+            "instances": 3
+        },
+        "full": {
+            "cpu": "2",
+            "memory": "2Gi",
+            "instances": 5
+        }
+    },
+    "monitoring": {
+        "alerts": [
+            {
+                "name": "highErrorRate",
+                "condition": "errorRate > 0.01",
+                "duration": "5m",
+                "notification": "email,slack"
+            },
+            {
+                "name": "circuitBreakerOpen",
+                "condition": "circuitBreakerState = 'OPEN'",
+                "duration": "1m",
+                "notification": "email,slack,pagerduty"
+            }
+        ]
+    }
+}

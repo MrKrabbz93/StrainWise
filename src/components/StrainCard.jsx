@@ -1,83 +1,160 @@
 import React, { useState, useEffect } from 'react';
-import { Activity, Droplet, Brain, MapPin, Sparkles, Share2, X, Star, User } from 'lucide-react';
+import { Activity, Droplet, Brain, MapPin, Sparkles, Share2, X, Star, User, Book } from 'lucide-react';
 import { generateCustomerReviews } from '../lib/gemini';
 import { motion, AnimatePresence } from 'framer-motion';
 import DispensaryMap from './DispensaryMap';
 import { getStrainImageUrl } from '../lib/images';
-import { generateImage } from '../lib/gemini';
+import { analytics } from '../lib/analytics';
+import { logFeedback } from '../lib/services/feedback.service';
+import { useUserStore } from '../lib/stores/user.store';
+import JournalEntry from './JournalEntry';
+
+import { getDispensariesWithStrain } from '../lib/services/dispensary.service';
 
 const StrainCard = ({ strain, dispensaries, userLocation }) => {
+    const user = useUserStore((state) => state.user);
     const [reviews, setReviews] = useState([]);
     const [isGenerating, setIsGenerating] = useState(true);
     const [showMap, setShowMap] = useState(false);
+    const [showDispensaries, setShowDispensaries] = useState(false);
     const [customImage, setCustomImage] = useState(null);
-    const [isGeneratingImage, setIsGeneratingImage] = useState(false);
+    const [isJournalModalOpen, setIsJournalModalOpen] = useState(false);
 
-    // Find dispensaries that have this strain
-    const availableDispensaries = dispensaries.filter(d => d.inventory.includes(strain.id));
+    // State for fetching real-time inventory
+    const [localDispensaries, setLocalDispensaries] = useState([]);
+
+    // Logic to determine which dispensaries to show (Prop fallback or Real-time)
+    const availableDispensaries = localDispensaries.length > 0
+        ? localDispensaries
+        : (dispensaries || []).filter(d => d.inventory?.includes(strain.id));
 
     useEffect(() => {
         let mounted = true;
-        const fetchReviews = async () => {
-            const data = await generateCustomerReviews(strain.name);
-            if (mounted) {
-                setReviews(data);
-                setIsGenerating(false);
+
+        const fetchData = async () => {
+            // 1. Fetch AI Reviews
+            const reviewsData = await generateCustomerReviews(strain.name);
+            if (!mounted) return;
+            setReviews(reviewsData);
+            setIsGenerating(false);
+
+            // 2. Fetch Nearby Availability
+            if (userLocation?.lat && userLocation?.lng) {
+                try {
+                    const nearby = await getDispensariesWithStrain(strain.id, userLocation.lat, userLocation.lng);
+                    if (mounted && nearby.length > 0) {
+                        setLocalDispensaries(nearby);
+                    }
+                } catch (err) {
+                    console.error("Failed to load local dispensaries", err);
+                }
             }
         };
-        fetchReviews();
+
+        fetchData();
         return () => { mounted = false; };
-    }, [strain]);
+    }, [strain, userLocation]);
 
-    const handleGenerateImage = async (e) => {
-        e.stopPropagation(); // Prevent card click
-        setIsGeneratingImage(true);
-        const prompt = `A cinematic, photorealistic close-up shot of the cannabis strain "${strain.name}". 
-        Visual traits: ${strain.visual_profile || 'lush green'}. 
-        Mood: ${strain.type === 'Sativa' ? 'Energetic, bright, sunny' : 'Relaxing, mystical, deep purple tones'}.
-        High quality, 8k resolution, macro photography.`;
+    const [imageState, setImageState] = useState('loading'); // 'loading' | 'loaded' | 'error'
+    const [imageSrc, setImageSrc] = useState(getStrainImageUrl(strain));
 
-        const url = await generateImage(prompt);
-        if (url) setCustomImage(url);
-        setIsGeneratingImage(false);
+    // Reset image state when strain changes
+    useEffect(() => {
+        setImageState('loading');
+        setImageSrc(customImage || getStrainImageUrl(strain));
+    }, [strain, customImage]);
+
+    const handleImageError = async () => {
+        // Prevent infinite loops if fallback also fails
+        if (imageSrc === '/placeholder.png') return;
+
+        if (imageSrc.includes('pexels') || imageSrc.includes('api/images')) {
+            // If API/Pexels failed, go to local absolute fallback
+            setImageSrc("/placeholder.png");
+            return;
+        }
+
+        try {
+            // Attempt to fetch from our proxy
+            const res = await fetch(`/api/images?strainName=${encodeURIComponent(strain.name)}`);
+            if (res.ok) {
+                const data = await res.json();
+                if (data.imageUrl) {
+                    setImageSrc(data.imageUrl);
+                    return;
+                }
+            }
+        } catch (err) {
+            console.warn("Fallback fetch failed", err);
+        }
+
+        // Final fallback
+        setImageSrc("/placeholder.png");
     };
 
     const visualProfileMap = {
-        purple: "from-purple-900/40 to-slate-900/90",
-        green_sativa: "from-emerald-900/40 to-slate-900/90",
-        frosty: "from-blue-900/40 to-slate-900/90",
-        orange: "from-orange-900/40 to-slate-900/90",
-        dark: "from-slate-900/90 to-black/90"
+        purple: "from-purple-900 via-indigo-900 to-slate-900",
+        green_sativa: "from-emerald-900 via-green-800 to-slate-900",
+        frosty: "from-blue-900 via-slate-800 to-slate-900",
+        orange: "from-orange-900 via-amber-900 to-slate-900",
+        dark: "from-slate-900 via-purple-950 to-black"
     };
 
     return (
         <>
             <motion.div
                 whileHover={{ y: -4, scale: 1.01 }}
-                onClick={() => { }} // Placeholder for future modal
-                className="group relative bg-slate-900/50 backdrop-blur-md rounded-2xl border border-white/5 overflow-hidden hover:shadow-[0_0_40px_-10px_rgba(16,185,129,0.2)] transition-all duration-300"
+                onClick={() => {
+                    analytics.track('strain_card_clicked', {
+                        strain_id: strain.id,
+                        strain_name: strain.name,
+                        strain_type: strain.type
+                    });
+
+                    if (user) {
+                        logFeedback(user.id, strain.id, 1, 'click');
+                    }
+                }}
+                className="group relative bg-slate-900/50 backdrop-blur-md rounded-2xl border border-white/5 overflow-hidden hover:shadow-[0_0_40px_-10px_rgba(16,185,129,0.2)] transition-all duration-300 transform scale-95 origin-center"
             >
                 {/* 1. Hero Image Area (Aspect 3:2) */}
-                <div className="aspect-[3/2] relative overflow-hidden">
-                    <img
-                        src={customImage || getStrainImageUrl(strain)}
-                        alt={strain.name}
-                        className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-                    />
+                <div className="aspect-[3/2] relative overflow-hidden bg-slate-900">
+
+                    {/* Loading Skeleton */}
+                    <AnimatePresence>
+                        {imageState === 'loading' && (
+                            <motion.div
+                                initial={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                className="absolute inset-0 z-10 flex items-center justify-center bg-slate-900"
+                            >
+                                <div className="w-8 h-8 border-2 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin" />
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
+
+                    {/* Dynamic Image / Gradient Layer */}
+                    {imageState === 'error' || imageSrc === '/placeholder.png' ? (
+                        <div className={`absolute inset-0 w-full h-full bg-gradient-to-br ${visualProfileMap[strain.visual_profile] || "from-slate-800 to-slate-950"} animate-gradient-slow`}>
+                            {/* Abstract Pattern Overlay */}
+                            <div className="absolute inset-0 opacity-30 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] mix-blend-overlay" />
+                            <div className="absolute inset-0 flex items-center justify-center opacity-20">
+                                <Sparkles className="w-24 h-24 text-white animate-pulse" />
+                            </div>
+                        </div>
+                    ) : (
+                        <img
+                            src={imageSrc}
+                            alt={strain.name}
+                            className={`absolute inset-0 w-full h-full object-cover transition-all duration-700 group-hover:scale-105 ${imageState === 'loaded' ? 'opacity-100' : 'opacity-0'}`}
+                            onLoad={() => setImageState('loaded')}
+                            onError={handleImageError}
+                        />
+                    )}
 
                     {/* Gradient Overlays for Readability */}
                     <div className={`absolute inset-0 bg-gradient-to-t ${visualProfileMap[strain.visual_profile] || "from-slate-900/90 to-transparent"} opacity-90`} />
                     <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-slate-950/80" />
-
-                    {/* Top Right: Magic Generator */}
-                    <button
-                        onClick={handleGenerateImage}
-                        disabled={isGeneratingImage}
-                        className="absolute top-3 right-3 p-2.5 bg-slate-950/40 backdrop-blur-md rounded-full text-white/70 hover:text-emerald-400 hover:bg-slate-950/80 border border-white/10 opacity-0 group-hover:opacity-100 transition-all z-20"
-                        title="Generate Unique AI Art"
-                    >
-                        {isGeneratingImage ? <Sparkles className="w-4 h-4 animate-spin text-emerald-400" /> : <Sparkles className="w-4 h-4" />}
-                    </button>
 
                     {/* Verified Badge */}
                     {strain.is_verified && (
@@ -104,11 +181,11 @@ const StrainCard = ({ strain, dispensaries, userLocation }) => {
                             </div>
                         </div>
                         <div className="flex items-center gap-2">
-                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider border ${strain.type.includes('Sativa') ? 'border-orange-500/20 text-orange-400 bg-orange-500/5' :
-                                strain.type.includes('Indica') ? 'border-purple-500/20 text-purple-400 bg-purple-500/5' :
-                                    'border-emerald-500/20 text-emerald-400 bg-emerald-500/5'
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider border ${(strain.type || '').includes('Sativa') ? 'border-orange-500/20 text-orange-400 bg-orange-500/5' :
+                                    (strain.type || '').includes('Indica') ? 'border-purple-500/20 text-purple-400 bg-purple-500/5' :
+                                        'border-emerald-500/20 text-emerald-400 bg-emerald-500/5'
                                 }`}>
-                                {strain.type}
+                                {strain.type || 'Hybrid'}
                             </span>
                             {/* Lineage (truncated) */}
                             {strain.lineage && (
@@ -146,7 +223,7 @@ const StrainCard = ({ strain, dispensaries, userLocation }) => {
                     <div className="mt-5 pt-4 border-t border-white/5 flex justify-between items-center">
                         {availableDispensaries.length > 0 ? (
                             <button
-                                onClick={() => setShowMap(true)}
+                                onClick={() => setShowDispensaries(!showDispensaries)}
                                 className="flex items-center gap-2 text-xs font-bold text-slate-300 hover:text-white group/btn transition-colors"
                             >
                                 <div className="w-6 h-6 rounded-full bg-emerald-500/10 flex items-center justify-center group-hover/btn:bg-emerald-500 group-hover/btn:text-slate-900 transition-colors">
@@ -159,12 +236,58 @@ const StrainCard = ({ strain, dispensaries, userLocation }) => {
                         )}
 
                         <div className="flex gap-2">
+                            <button
+                                onClick={(e) => { e.stopPropagation(); setIsJournalModalOpen(true); }}
+                                className="p-2 rounded-full hover:bg-white/5 text-slate-500 hover:text-emerald-400 transition-colors"
+                                title="Log to Journal"
+                            >
+                                <Book className="w-4 h-4" />
+                            </button>
                             <button className="p-2 rounded-full hover:bg-white/5 text-slate-500 hover:text-white transition-colors">
                                 <Share2 className="w-4 h-4" />
                             </button>
                             {/* Favorite Button could go here */}
                         </div>
                     </div>
+
+                    {/* Dispensary List Expansion */}
+                    <AnimatePresence>
+                        {showDispensaries && (
+                            <motion.div
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: "auto" }}
+                                exit={{ opacity: 0, height: 0 }}
+                                className="mt-3 bg-slate-950/40 rounded-xl border border-white/5 overflow-hidden"
+                            >
+                                <div className="p-3 space-y-2">
+                                    {availableDispensaries.slice(0, 5).map(d => (
+                                        <div key={d.id} className="flex justify-between items-center text-xs group/disp hover:bg-white/5 p-2 rounded-lg transition-colors cursor-pointer" onClick={() => window.open(`https://maps.google.com/?q=${d.name} ${d.address}`, '_blank')}>
+                                            <div className="flex flex-col">
+                                                <span className="text-slate-200 font-bold group-hover/disp:text-emerald-400 transition-colors">{d.name}</span>
+                                                <span className="text-slate-500">{d.distance?.toFixed(1)} miles away</span>
+                                            </div>
+                                            <div className="text-right">
+                                                {(d.price_eighth || d.price_metric) ? (
+                                                    <span className="block font-mono text-emerald-400 font-bold">
+                                                        ${d.price_eighth || d.price_metric}
+                                                        <span className="text-[10px] text-slate-500 font-sans ml-0.5">/{d.price_eighth ? '3.5g' : 'g'}</span>
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-slate-600 italic">Call for Price</span>
+                                                )}
+                                            </div>
+                                        </div>
+                                    ))}
+                                    <button
+                                        onClick={() => setShowMap(true)}
+                                        className="w-full mt-2 py-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 text-xs font-bold rounded-lg border border-emerald-500/20 transition-all flex items-center justify-center gap-2"
+                                    >
+                                        <MapPin className="w-3 h-3" /> View All on Map
+                                    </button>
+                                </div>
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
 
                     {/* Reviews Summary (Mini) */}
                     {reviews.length > 0 && (
@@ -209,6 +332,15 @@ const StrainCard = ({ strain, dispensaries, userLocation }) => {
                             </div>
                         </motion.div>
                     </motion.div>
+                )}
+                {isJournalModalOpen && (
+                    <JournalEntry
+                        strain={strain}
+                        onClose={() => setIsJournalModalOpen(false)}
+                        onSave={() => {
+                            // Optional: Show success toast
+                        }}
+                    />
                 )}
             </AnimatePresence>
         </>

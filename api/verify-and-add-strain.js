@@ -5,9 +5,10 @@ const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const tavilyApiKey = process.env.TAVILY_API_KEY;
 
-if (!supabaseUrl || !supabaseServiceKey || !tavilyApiKey) {
-    console.error("Missing environment variables");
+if (!supabaseUrl || !supabaseServiceKey) {
+    console.error("Missing Critical Environment Variables (Supabase)");
 }
+if (!tavilyApiKey) console.warn("Optional: TAVILY_API_KEY missing. Verification features might fail.");
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey);
 

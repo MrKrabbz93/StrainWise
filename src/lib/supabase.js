@@ -1,39 +1,60 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const getEnv = (key) => {
+    // Vite / Client Side
+    if (typeof import.meta !== 'undefined' && import.meta.env) {
+        return import.meta.env[key];
+    }
+    // Node / Server Side
+    if (typeof process !== 'undefined' && process.env) {
+        return process.env[key];
+    }
+    return undefined;
+};
 
-// Safe Storage Adapter to handle "Disk Full" errors gracefully
+const supabaseUrl = getEnv('VITE_SUPABASE_URL') || getEnv('SUPABASE_URL');
+const supabaseAnonKey = getEnv('VITE_SUPABASE_ANON_KEY') || getEnv('SUPABASE_ANON_KEY');
+
+// Safe Storage Adapter to handle "Disk Full" errors gracefully and Server-Side Rendering
 class SafeStorage {
     constructor() {
         this.memoryStorage = new Map();
+        this.isBrowser = typeof window !== 'undefined' && typeof window.localStorage !== 'undefined';
     }
 
     getItem(key) {
-        try {
-            return localStorage.getItem(key);
-        } catch (e) {
-            console.warn('Storage Read Error (using memory fallback):', e);
-            return this.memoryStorage.get(key) || null;
+        if (this.isBrowser) {
+            try {
+                return localStorage.getItem(key);
+            } catch (e) {
+                console.warn('Storage Read Error (using memory fallback):', e);
+            }
         }
+        return this.memoryStorage.get(key) || null;
     }
 
     setItem(key, value) {
-        try {
-            localStorage.setItem(key, value);
-        } catch (e) {
-            console.warn('Storage Write Error (using memory fallback):', e);
-            this.memoryStorage.set(key, value);
+        if (this.isBrowser) {
+            try {
+                localStorage.setItem(key, value);
+                return;
+            } catch (e) {
+                console.warn('Storage Write Error (using memory fallback):', e);
+            }
         }
+        this.memoryStorage.set(key, value);
     }
 
     removeItem(key) {
-        try {
-            localStorage.removeItem(key);
-        } catch (e) {
-            console.warn('Storage Delete Error:', e);
-            this.memoryStorage.delete(key);
+        if (this.isBrowser) {
+            try {
+                localStorage.removeItem(key);
+                return;
+            } catch (e) {
+                console.warn('Storage Delete Error:', e);
+            }
         }
+        this.memoryStorage.delete(key);
     }
 }
 
@@ -88,6 +109,12 @@ if (supabaseUrl && supabaseAnonKey) {
                 let user = null;
                 try { user = JSON.parse(localStorage.getItem('supabase.auth.token')); } catch (e) { }
                 return { data: { user }, error: null };
+            },
+            getSession: async () => {
+                let user = null;
+                try { user = JSON.parse(localStorage.getItem('supabase.auth.token')); } catch (e) { }
+                const session = user ? { user, access_token: 'mock-token' } : null;
+                return { data: { session }, error: null };
             }
         },
         from: (table) => {
@@ -162,3 +189,18 @@ if (supabaseUrl && supabaseAnonKey) {
 }
 
 export const supabase = supabaseClient;
+
+// --- Read Replica Support ---
+// In production, point VITE_SUPABASE_READ_REPLICA_URL to your read replica's API URL
+const supabaseReplicaUrl = getEnv('VITE_SUPABASE_READ_REPLICA_URL');
+
+export const supabaseReplica = (supabaseReplicaUrl && supabaseAnonKey)
+    ? createClient(supabaseReplicaUrl, supabaseAnonKey, {
+        auth: {
+            persistSession: false, // Replicas are for reading data, not auth management
+            autoRefreshToken: false,
+            detectSessionInUrl: false
+        }
+    })
+    : supabaseClient; // Fallback to primary if no replica configured
+

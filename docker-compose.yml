@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  strainwise:
+    container_name: strainwise_app
+    build: .
+    ports:
+      - "4173:4173"
+    env_file:
+      - .env
+    environment:
+      - PORT=4173
+      - NODE_ENV=production
+    restart: unless-stopped

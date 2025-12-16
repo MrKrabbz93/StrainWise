@@ -4,41 +4,26 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 // https://vite.dev/config/
 export default defineConfig({
+  server: {
+    proxy: {
+      '/api': 'http://localhost:3001'
+    }
+  },
   plugins: [
     react(),
     VitePWA({
+      strategies: 'injectManifest', // Use our custom sw.js
+      srcDir: 'src',
+      filename: 'sw.js',
       registerType: 'autoUpdate',
+      injectManifest: {
+        swDest: 'dist/sw.js',
+        // Glob patterns to include in the precache manifest
+        globPatterns: ['**/*.{js,css,html,ico,png,svg}']
+      },
       manifestFilename: 'manifest.json', // Ensure it matches index.html
       includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'masked-icon.svg'],
-      workbox: {
-        runtimeCaching: [
-          {
-            urlPattern: ({ url }) => url.href.includes('supabase.co/rest/v1/'),
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'supabase-api-cache',
-              expiration: {
-                maxEntries: 100,
-                maxAgeSeconds: 60 * 60 * 24 // 24 hours
-              },
-              cacheableResponse: {
-                statuses: [0, 200]
-              }
-            }
-          },
-          {
-            urlPattern: ({ url }) => url.href.includes('supabase.co/storage/v1/object/public/'),
-            handler: 'StaleWhileRevalidate',
-            options: {
-              cacheName: 'supabase-storage-cache',
-              expiration: {
-                maxEntries: 50,
-                maxAgeSeconds: 60 * 60 * 24 * 7 // 7 days
-              }
-            }
-          }
-        ]
-      },
+      // workbox options moved to injectManifest block implicitly or manually handled in sw.js
       manifest: {
         name: 'StrainWise AI Consultant',
         short_name: 'StrainWise',

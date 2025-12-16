@@ -22,11 +22,18 @@ const updateSW = registerSW({
   },
 });
 
+import { HelmetProvider } from 'react-helmet-async';
+import { BrowserRouter } from 'react-router-dom';
+
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <ErrorBoundary>
-      <App />
-      <Analytics />
+      <HelmetProvider>
+        <BrowserRouter>
+          <App />
+        </BrowserRouter>
+      </HelmetProvider>
+      {/* <Analytics /> */}
     </ErrorBoundary>
   </StrictMode>,
 )

@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { BookOpen, Users } from 'lucide-react';
+import { useLocation, useNavigate, Routes, Route } from 'react-router-dom';
+
 import Layout from './components/Layout';
 import ConsultantInterface from './components/ConsultantInterface';
 import StrainCard from './components/StrainCard';
@@ -9,45 +12,64 @@ import DispensaryList from './components/DispensaryList';
 import Background from './components/Background';
 import AuthModal from './components/AuthModal';
 import UserProfile from './components/UserProfile';
-import SettingsModal from './components/SettingsModal';
+import AppSettings from './components/AppSettings';
+import PrivacyPolicy from './pages/PrivacyPolicy';
+import TermsOfService from './pages/TermsOfService';
+import JournalPage from './pages/JournalPage';
+import StrainPage from './pages/StrainPage'; // NEW
+import TermsAndConditionsModal from './components/TermsAndConditionsModal';
 import TutorialOverlay from './components/TutorialOverlay';
 import SubmitStrainForm from './components/SubmitStrainForm';
 import SubmitDispensaryForm from './components/SubmitDispensaryForm';
-import TermsAndConditionsModal from './components/TermsAndConditionsModal'; // Add Import
+import CommunityFeed from './components/CommunityFeed';
+
+import { useUserStore } from './lib/stores/user.store';
 import { supabase } from './lib/supabase';
-import strainsData from './data/strains.json';
+import { PostHogProvider } from './providers/PostHogProvider';
+import posthog from './lib/analytics'; // Import direct instance
 
 function App() {
   const [activeTab, setActiveTab] = useState('consult');
+  const userStore = useUserStore();
+  const location = useLocation();
+  const navigate = useNavigate();
+
   // ... existing state
-  const [contributeMode, setContributeMode] = useState('strain');
+  const [user, setUser] = useState(null);
   const [recommendations, setRecommendations] = useState([]);
   const [dispensaries, setDispensaries] = useState([]);
   const [userLocation, setUserLocation] = useState(null);
-  const [user, setUser] = useState(null);
+  const [contributeMode, setContributeMode] = useState('strain');
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [hasEntered, setHasEntered] = useState(false);
   const [showTutorial, setShowTutorial] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
-  const [showTermsModal, setShowTermsModal] = useState(false); // Add State
+  const [showTermsModal, setShowTermsModal] = useState(false);
 
+  // Sync Router Location to State
   useEffect(() => {
-    // Check for user session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setUser(session?.user ?? null);
-    });
+    const path = location.pathname.substring(1); // remove slash
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-    });
+    // Analytics: Track Pageview
+    posthog.capture('$pageview');
 
-    return () => subscription.unsubscribe();
-  }, []);
+    if (path.startsWith('strain/')) {
+      setActiveTab('strain-detail');
+      setHasEntered(true);
+    } else if (path === 'welcome') {
+      setHasEntered(false); // Go to Landing
+    } else if (['strains', 'dispensaries', 'profile', 'consult', 'contribute', 'privacy', 'terms'].includes(path)) {
+      setActiveTab(path);
+      if (!hasEntered) setHasEntered(true); // Ensure we are 'in' the app
+    }
+  }, [location, hasEntered]);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
     setUser(null);
+    userStore.logout();
     setActiveTab('consult');
+    navigate('/consult'); // Sync Router
   };
 
   const handleLoginSuccess = (user) => {
@@ -55,32 +77,69 @@ function App() {
     setShowAuthModal(false);
   };
 
-  const handleRecommendations = (recs) => {
-    setRecommendations(recs);
-    // Auto-scroll to recommendations
-    setTimeout(() => {
-      const element = document.getElementById('recommendations');
-      if (element) element.scrollIntoView({ behavior: 'smooth' });
-    }, 100);
-  };
-
   const handleResetTutorial = () => {
+    // Legacy handler, now handled by AppSettings internally mostly, 
+    // but if AppSettings calls navigate('/welcome'), the useEffect handles it.
     localStorage.removeItem('strainwise_tutorial_seen');
     setShowTutorial(true);
     setShowSettingsModal(false);
   };
 
-  const handleClearCache = () => {
-    localStorage.clear();
-    window.location.reload();
+  const handleRecommendations = async (strainNames) => {
+    // 1. Resolve Strain Names to Objects
+    try {
+      if (!strainNames || strainNames.length === 0) {
+        setRecommendations([]);
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('strains')
+        .select('*')
+        .in('name', strainNames);
+
+      if (error) throw error;
+
+      if (data && data.length > 0) {
+        setRecommendations(data);
+        setTimeout(() => {
+          const element = document.getElementById('recommendations');
+          if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+          }
+        }, 100);
+      } else {
+        console.warn("Recommendations found no matching strains in DB.");
+        setRecommendations([]);
+      }
+    } catch (err) {
+      console.error("Error fetching recommendation details:", err);
+      // Fallback? No, just don't crash.
+    }
   };
 
   const renderContent = () => {
+    // Intercept for Detail Pages
+    if (activeTab === 'strain-detail') {
+      return <StrainPage />;
+    }
+
     switch (activeTab) {
       case 'profile':
         return <UserProfile user={user} onLogout={handleLogout} />;
       case 'strains':
-        return <StrainLibrary />;
+        return user ? <StrainLibrary userLocation={userLocation} /> : (
+          <div className="flex flex-col items-center justify-center p-12 text-center bg-slate-900/50 rounded-3xl border border-white/5 mt-12">
+            <div className="w-16 h-16 bg-purple-500/10 rounded-full flex items-center justify-center mb-6">
+              <BookOpen className="w-8 h-8 text-purple-400" />
+            </div>
+            <h2 className="text-2xl font-bold text-white mb-2">The Archive is Locked</h2>
+            <p className="text-slate-400 mb-6 max-w-md">Sign in to access the 3D Strain Encyclopedia and AI Research Lab.</p>
+            <button onClick={() => setShowAuthModal(true)} className="px-6 py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl transition-colors">
+              Access Archives
+            </button>
+          </div>
+        );
       case 'dispensaries':
         return <DispensaryList dispensaries={dispensaries} userLocation={userLocation} />;
       case 'contribute':
@@ -128,6 +187,15 @@ function App() {
             )}
           </div>
         );
+
+      case 'journal':
+        return <JournalPage />;
+      case 'community':
+        return <CommunityFeed />;
+      case 'privacy':
+        return <PrivacyPolicy />;
+      case 'terms':
+        return <TermsOfService />;
       case 'consult':
       default:
         return (
@@ -198,98 +266,92 @@ function App() {
   };
 
   return (
-    <AnimatePresence mode="wait">
-      {!hasEntered ? (
-        <motion.div
-          key="landing"
-          exit={{ opacity: 0, y: -50 }}
-          transition={{ duration: 0.8, ease: "easeInOut" }}
-        >
-          <LandingPage onEnter={() => {
-            setHasEntered(true);
-            // Request Location
-            if (navigator.geolocation) {
-              console.log("Requesting user location...");
-              navigator.geolocation.getCurrentPosition(
-                (position) => {
-                  console.log("Location found:", position.coords);
-                  setUserLocation({
-                    lat: position.coords.latitude,
-                    lng: position.coords.longitude
-                  });
-                },
-                (error) => {
-                  console.warn("Location access denied or error:", error);
-                  // Optional: Set default to Perth if denied explicitly, though 'null' handles it in Map component.
-                  // But setting it here ensures "Nearby" logic uses Perth if desired.
-                  if (error.code === 1) console.warn("User denied location services. Defaulting to 'null' (Global/Perth).");
-                }
-              );
-            } else {
-              console.warn("Geolocation is not supported by this browser.");
-            }
-            // Check if tutorial was already seen in this session or local storage
-            const seen = localStorage.getItem('strainwise_tutorial_seen');
-            if (!seen) {
-              setTimeout(() => setShowTutorial(true), 500); // Slight delay for effect
-            }
-          }} />
-        </motion.div>
-      ) : (
-        <motion.div
-          key="app"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.8 }}
-          className="min-h-screen bg-slate-950 text-slate-200 font-sans selection:bg-emerald-500/30"
-        >
-          <Background />
-          <Layout
-            activeTab={activeTab}
-            onTabChange={setActiveTab}
-            user={user}
-            onLoginClick={() => setShowAuthModal(true)}
-            onSettingsClick={() => setShowSettingsModal(true)}
-            onOpenTerms={() => setShowTermsModal(true)}
+    <PostHogProvider>
+      <AnimatePresence mode="wait">
+        {!hasEntered ? (
+          <motion.div
+            key="landing"
+            exit={{ opacity: 0, y: -50 }}
+            transition={{ duration: 0.8, ease: "easeInOut" }}
           >
-            {renderContent()}
-          </Layout>
+            <LandingPage onEnter={() => {
+              setHasEntered(true);
+              navigate('/consult');
+              if (navigator.geolocation) {
+                console.log("Requesting user location...");
+                navigator.geolocation.getCurrentPosition(
+                  (position) => {
+                    console.log("Location found:", position.coords);
+                    setUserLocation({
+                      lat: position.coords.latitude,
+                      lng: position.coords.longitude
+                    });
+                  },
+                  (error) => {
+                    console.warn("Location access denied or error:", error);
+                    if (error.code === 1) console.warn("User denied location services. Defaulting to 'null' (Global/Perth).");
+                  }
+                );
+              } else {
+                console.warn("Geolocation is not supported by this browser.");
+              }
+              const seen = localStorage.getItem('strainwise_tutorial_seen');
+              if (!seen) {
+                setTimeout(() => setShowTutorial(true), 500);
+              }
+            }} />
+          </motion.div>
+        ) : (
+          <motion.div
+            key="app"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.8 }}
+            className="min-h-screen bg-slate-950 text-slate-200 font-sans selection:bg-emerald-500/30"
+          >
+            <Background />
+            <Layout
+              activeTab={activeTab}
+              onTabChange={(tab) => {
+                setActiveTab(tab);
+                navigate(`/${tab}`);
+              }}
+              user={user}
+              onLoginClick={() => setShowAuthModal(true)}
+              onSettingsClick={() => setShowSettingsModal(true)}
+              onOpenTerms={() => setShowTermsModal(true)}
+            >
+              {renderContent()}
+            </Layout>
 
-          <AuthModal
-            isOpen={showAuthModal}
-            onClose={() => setShowAuthModal(false)}
-            onLoginSuccess={handleLoginSuccess}
-          />
+            <AuthModal
+              isOpen={showAuthModal}
+              onClose={() => setShowAuthModal(false)}
+              onLoginSuccess={handleLoginSuccess}
+            />
 
-          <SettingsModal
-            isOpen={showSettingsModal}
-            onClose={() => setShowSettingsModal(false)}
-            onResetTutorial={handleResetTutorial}
-            onClearCache={handleClearCache}
-            onOpenTerms={() => {
-              setShowSettingsModal(false); // Close settings to show terms
-              setShowTermsModal(true);
-            }}
-          />
-
-          <TermsAndConditionsModal
-            isOpen={showTermsModal}
-            onClose={() => setShowTermsModal(false)}
-          />
-
-          <AnimatePresence>
-            {showTutorial && (
-              <TutorialOverlay onComplete={() => {
-                setShowTutorial(false);
-                localStorage.setItem('strainwise_tutorial_seen', 'true');
-              }} />
+            {showSettingsModal && (
+              <AppSettings onClose={() => setShowSettingsModal(false)} />
             )}
-          </AnimatePresence>
-        </motion.div>
-      )}
-    </AnimatePresence>
+
+            <TermsAndConditionsModal
+              isOpen={showTermsModal}
+              onClose={() => setShowTermsModal(false)}
+            />
+
+            <AnimatePresence>
+              {showTutorial && (
+                <TutorialOverlay onComplete={() => {
+                  setShowTutorial(false);
+                  localStorage.setItem('strainwise_tutorial_seen', 'true');
+                }} />
+              )}
+            </AnimatePresence>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </PostHogProvider>
   );
 }
 
 export default App;
-// StrainWise v1.1.1 - Force Deploy

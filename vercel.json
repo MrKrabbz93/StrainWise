@@ -1,6 +1,10 @@
 {
     "rewrites": [
         {
+            "source": "/api/images",
+            "destination": "/api/images.js"
+        },
+        {
             "source": "/api/(.*)",
             "destination": "/api/$1"
         },
@@ -34,6 +38,5 @@
                 }
             ]
         }
-    ],
-]
+    ]
 }

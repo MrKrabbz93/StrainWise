@@ -1,7 +1,8 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { User, Map, BookOpen, Sparkles, Settings, PlusCircle } from 'lucide-react';
+import { User, Map, BookOpen, Sparkles, Settings, PlusCircle, Book, Users } from 'lucide-react';
 import Background from './Background';
+import Logo from './Logo';
 
 const Layout = ({ children, activeTab, onTabChange, user, onLoginClick, onSettingsClick, onOpenTerms }) => {
     const { t } = useTranslation();
@@ -9,6 +10,8 @@ const Layout = ({ children, activeTab, onTabChange, user, onLoginClick, onSettin
     const navItems = [
         { id: 'consult', label: t('tabs.consultant'), icon: User },
         { id: 'strains', label: t('tabs.library'), icon: BookOpen },
+        { id: 'community', label: 'Community', icon: Users },
+        { id: 'journal', label: 'My Journal', icon: Book },
         { id: 'dispensaries', label: t('tabs.dispensaries'), icon: Map },
         { id: 'contribute', label: 'Contribute', icon: PlusCircle },
     ];
@@ -18,13 +21,8 @@ const Layout = ({ children, activeTab, onTabChange, user, onLoginClick, onSettin
             {/* Header */}
             <header className="sticky top-0 z-40 border-b border-white/5 bg-slate-950/80 backdrop-blur-xl">
                 <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 bg-gradient-to-br from-emerald-400 to-cyan-400 rounded-lg flex items-center justify-center shadow-[0_0_15px_rgba(16,185,129,0.3)]">
-                            <Sparkles className="w-5 h-5 text-slate-950" />
-                        </div>
-                        <span className="font-bold text-xl tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white to-slate-400">
-                            Strain<span className="text-emerald-400">Wise</span>
-                        </span>
+                    <div className="flex items-center">
+                        <Logo className="w-10 h-10" />
                     </div>
 
                     <nav className="hidden md:flex items-center gap-2">
