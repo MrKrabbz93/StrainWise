@@ -128,18 +128,7 @@ function App() {
       case 'profile':
         return <UserProfile user={user} onLogout={handleLogout} />;
       case 'strains':
-        return user ? <StrainLibrary userLocation={userLocation} /> : (
-          <div className="flex flex-col items-center justify-center p-12 text-center bg-slate-900/50 rounded-3xl border border-white/5 mt-12">
-            <div className="w-16 h-16 bg-purple-500/10 rounded-full flex items-center justify-center mb-6">
-              <BookOpen className="w-8 h-8 text-purple-400" />
-            </div>
-            <h2 className="text-2xl font-bold text-white mb-2">The Archive is Locked</h2>
-            <p className="text-slate-400 mb-6 max-w-md">Sign in to access the 3D Strain Encyclopedia and AI Research Lab.</p>
-            <button onClick={() => setShowAuthModal(true)} className="px-6 py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold rounded-xl transition-colors">
-              Access Archives
-            </button>
-          </div>
-        );
+        return <StrainLibrary userLocation={userLocation} user={user} />;
       case 'dispensaries':
         return <DispensaryList dispensaries={dispensaries} userLocation={userLocation} />;
       case 'contribute':

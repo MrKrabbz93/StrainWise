@@ -10,7 +10,7 @@ import { getDispensariesWithStrain } from '../lib/services/dispensary.service';
 import { addXP } from '../lib/gamification';
 import dispensariesData from '../data/dispensaries.json';
 
-const StrainLibrary = ({ userLocation }) => {
+const StrainLibrary = ({ userLocation, user }) => {
     // --- State ---
     const [viewMode, setViewMode] = useState('hallway'); // 'hallway' | 'focus' | 'lab'
     const [selectedStrain, setSelectedStrain] = useState(null);
@@ -294,8 +294,8 @@ const StrainLibrary = ({ userLocation }) => {
                             key={type}
                             onClick={() => { setActiveType(type); setActiveEffect(null); }}
                             className={`px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all whitespace-nowrap ${activeType === type
-                                    ? 'bg-emerald-500 text-slate-950 shadow-[0_0_15px_rgba(16,185,129,0.4)]'
-                                    : 'bg-slate-900/50 text-slate-500 border border-white/5 hover:text-emerald-400'
+                                ? 'bg-emerald-500 text-slate-950 shadow-[0_0_15px_rgba(16,185,129,0.4)]'
+                                : 'bg-slate-900/50 text-slate-500 border border-white/5 hover:text-emerald-400'
                                 }`}
                         >
                             {type}
@@ -307,8 +307,8 @@ const StrainLibrary = ({ userLocation }) => {
                             key={effect}
                             onClick={() => { setActiveEffect(activeEffect === effect ? null : effect); }} // Toggle
                             className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all whitespace-nowrap flex items-center gap-1 ${activeEffect === effect
-                                    ? 'bg-blue-500/20 border-blue-500 text-blue-400'
-                                    : 'bg-transparent border-slate-800 text-slate-500 hover:border-slate-600'
+                                ? 'bg-blue-500/20 border-blue-500 text-blue-400'
+                                : 'bg-transparent border-slate-800 text-slate-500 hover:border-slate-600'
                                 }`}
                         >
                             {activeEffect === effect && <Activity className="w-3 h-3" />}
@@ -387,8 +387,8 @@ const StrainLibrary = ({ userLocation }) => {
                                 <div className="absolute inset-0 bg-gradient-to-tr from-black/80 via-transparent to-transparent" />
 
                                 <div className="absolute bottom-6 left-6">
-                                    <div className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider mb-2 border bg-black/50 backdrop-blur-md ${selectedStrain.type.includes('Sativa') ? 'border-orange-500/50 text-orange-400' : 'border-purple-500/50 text-purple-400'}`}>
-                                        {selectedStrain.type}
+                                    <div className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider mb-2 border bg-black/50 backdrop-blur-md ${(selectedStrain.type || '').includes('Sativa') ? 'border-orange-500/50 text-orange-400' : 'border-purple-500/50 text-purple-400'}`}>
+                                        {selectedStrain.type || 'Hybrid'}
                                     </div>
                                     <h1 className="text-4xl font-black text-white leading-none mb-1">{selectedStrain.name}</h1>
                                     <div className="flex gap-2">

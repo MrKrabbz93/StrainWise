@@ -26,7 +26,7 @@ const StrainCard = ({ strain, dispensaries, userLocation }) => {
     // Logic to determine which dispensaries to show (Prop fallback or Real-time)
     const availableDispensaries = localDispensaries.length > 0
         ? localDispensaries
-        : (dispensaries || []).filter(d => d.inventory?.includes(strain.id));
+        : (dispensaries || []).filter(d => Array.isArray(d.inventory) && d.inventory.includes(strain.id));
 
     useEffect(() => {
         let mounted = true;
@@ -182,8 +182,8 @@ const StrainCard = ({ strain, dispensaries, userLocation }) => {
                         </div>
                         <div className="flex items-center gap-2">
                             <span className={`text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider border ${(strain.type || '').includes('Sativa') ? 'border-orange-500/20 text-orange-400 bg-orange-500/5' :
-                                    (strain.type || '').includes('Indica') ? 'border-purple-500/20 text-purple-400 bg-purple-500/5' :
-                                        'border-emerald-500/20 text-emerald-400 bg-emerald-500/5'
+                                (strain.type || '').includes('Indica') ? 'border-purple-500/20 text-purple-400 bg-purple-500/5' :
+                                    'border-emerald-500/20 text-emerald-400 bg-emerald-500/5'
                                 }`}>
                                 {strain.type || 'Hybrid'}
                             </span>
