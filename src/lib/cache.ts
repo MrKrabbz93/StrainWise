@@ -42,7 +42,7 @@ class LRUCache {
 
 // --- Hybrid Cache Service (Redis + Local) ---
 class CacheService {
-    private redis: Redis | null;
+    private redis: any;
     private localCache: LRUCache;
     private useRedis: boolean;
 
@@ -52,7 +52,7 @@ class CacheService {
         this.useRedis = !!process.env.REDIS_URL;
 
         if (this.useRedis && process.env.REDIS_URL) {
-            this.redis = new Redis(process.env.REDIS_URL);
+            this.redis = new (Redis as any)(process.env.REDIS_URL);
             this.redis.on('error', (err: any) => {
                 console.error('Redis Error:', err);
                 this.useRedis = false; // Fallback to local

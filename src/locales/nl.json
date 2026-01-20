@@ -1,0 +1,53 @@
+{
+    "welcome": {
+        "title": "StrainWise",
+        "subtitle": "Uw Persoonlijke AI Cannabis Consultant",
+        "getStarted": "Aan de Slag",
+        "login": "Inloggen"
+    },
+    "auth": {
+        "signIn": "Inloggen",
+        "signUp": "Registreren",
+        "email": "E-mail",
+        "password": "Wachtwoord",
+        "continue": "Doorgaan"
+    },
+    "tabs": {
+        "consultant": "Consultant",
+        "library": "Soorten",
+        "dispensaries": "Verkooppunten",
+        "profile": "Profiel"
+    },
+    "profile": {
+        "favorites": "Favorieten",
+        "inbox": "Inbox",
+        "community": "Community",
+        "sponsorship": "Sponsoring",
+        "sommelier": "AI Sommelier",
+        "system": "Systeem",
+        "settings": "Instellingen",
+        "logout": "Uitloggen",
+        "edit": "Profiel Bewerken",
+        "save": "Wijzigingen Opslaan",
+        "cancel": "Annuleren",
+        "public": "Openbaar",
+        "private": "Privé"
+    },
+    "sommelier": {
+        "title": "AI Sommelier",
+        "desc": "Gepersonaliseerde aanbevelingen op basis van uw unieke smaak.",
+        "curate": "Stel Mijn Menu Samen"
+    },
+    "system": {
+        "push_notifications": "Push-notificaties",
+        "enable_tips": "Dagelijkse Tips Inschakelen",
+        "tips_enabled": "Dagelijkse Tips Ingeschakeld!",
+        "desc": "Ontvang dagelijke aanbevelingen voor soorten."
+    },
+    "landing": {
+        "tagline": "Premium Cannabis Intelligentie",
+        "description": "Ervaar de toekomst van gepersonaliseerd cannabisadvies. Aangedreven door geavanceerde AI om u te begeleiden op uw reis van nieuwsgierigheid naar fijnproever.",
+        "button": "Beleef StrainWise",
+        "footer": "Sinds 2025 • Perth • WA"
+    }
+}

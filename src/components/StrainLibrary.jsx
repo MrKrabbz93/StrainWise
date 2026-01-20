@@ -10,14 +10,72 @@ import { getDispensariesWithStrain } from '../lib/services/dispensary.service';
 import { addXP } from '../lib/gamification';
 import dispensariesData from '../data/dispensaries.json';
 
+import { useRef } from 'react'; // Added useRef
 const StrainLibrary = ({ userLocation, user }) => {
+    const scrollRef = useRef(null); // Ref for carousel container
+
     // --- State ---
     const [viewMode, setViewMode] = useState('hallway'); // 'hallway' | 'focus' | 'lab'
     const [selectedStrain, setSelectedStrain] = useState(null);
     const [query, setQuery] = useState('');
+    const [isAutoScrolling, setIsAutoScrolling] = useState(true);
+    const [isUserInteracting, setIsUserInteracting] = useState(false);
+
+    // --- Auto-scroll Logic ---
+    useEffect(() => {
+        let animationFrameId;
+        const scrollContainer = scrollRef.current;
+
+        const scroll = () => {
+            if (scrollContainer && !isUserInteracting && isAutoScrolling) {
+                // Gentle auto-scroll (30fps equivalent speed)
+                scrollContainer.scrollLeft += 1;
+
+                // Reset if reached end (circular illusion handled by large padding or infinite list logic could be added)
+                // For now, simpler: bounce back or just stop? Let's just scroll.
+                if (scrollContainer.scrollLeft >= (scrollContainer.scrollWidth - scrollContainer.clientWidth)) {
+                    scrollContainer.scrollLeft = 0; // Loop back to start
+                }
+            }
+            animationFrameId = requestAnimationFrame(scroll);
+        };
+
+        if (isAutoScrolling) {
+            animationFrameId = requestAnimationFrame(scroll);
+        }
+
+        return () => cancelAnimationFrame(animationFrameId);
+    }, [isAutoScrolling, isUserInteracting]);
+
+    // Handle user interaction to pause auto-scroll
+    const handleInteractionStart = () => {
+        setIsUserInteracting(true);
+        setIsAutoScrolling(false);
+    };
+
+    const handleInteractionEnd = () => {
+        setIsUserInteracting(false);
+        // Resume auto-scroll after a delay if desired, or keep it manual? 
+        // User requested: "Auto-scroll should pause on user interaction". 
+        // Let's resume after 3 seconds of inactivity
+        setTimeout(() => setIsAutoScrolling(true), 3000);
+    };
+
+    // Manual Navigation
+    const scroll = (direction) => {
+        if (scrollRef.current) {
+            const scrollAmount = 350; // Approx card width + gap
+            scrollRef.current.scrollBy({
+                left: direction === 'left' ? -scrollAmount : scrollAmount,
+                behavior: 'smooth'
+            });
+            handleInteractionStart(); // Pause auto-scroll on manual nav
+            handleInteractionEnd(); // Set resume timer
+        }
+    };
 
     // Filters
-    const [activeType, setActiveType] = useState('All'); // All, Indica, Sativa, Hybrid
+
     const [activeEffect, setActiveEffect] = useState(null); // Sleep, Pain, Creative, etc.
 
     const [filteredStrains, setFilteredStrains] = useState([]); // Initialize empty
@@ -30,87 +88,93 @@ const StrainLibrary = ({ userLocation, user }) => {
     const [newStrainForm, setNewStrainForm] = useState({ name: '', company: '' });
 
     // Fetch Strains from DB (with Filters)
+    // Fetch Strains from DB (with Filters)
     useEffect(() => {
         const fetchStrains = async () => {
             setIsLoading(true);
-            let queryBuilder = supabase
-                .from('strains')
-                .select('*')
-                .limit(100);
+            try {
+                let queryBuilder = supabase
+                    .from('strains')
+                    .select('*');
 
-            // Apply Filters
-            if (activeType !== 'All') {
-                queryBuilder = queryBuilder.ilike('type', `%${activeType}%`);
-            }
+                // Let's simplified fetching: Fetch mostly everything (limit is high enough or pagination)
 
-            // If we have an effect filter, we search description or effects column
-            // Assuming 'effects' is an array column: .contains('effects', [activeEffect])
-            // Or ilike description. Let's do simple text search for now to be safe.
-            // Note: 'cs' is contains for arrays. If column is text array. 
-            // If it's JSONB, utilize @> but straightforward text search is .textSearch usually.
-            // Falling back to JS filter for effects if DB structure is complex, 
-            // but let's try to fetch broadly then filter.
-            // For now, we fetch broadly and filter client-side for effects.
-
-            const { data, error } = await queryBuilder;
-
-            if (data) {
-                // Sort: Images first
-                let sorted = data.sort((a, b) => {
-                    const hasImageA = a.image_url && a.image_url.length > 5;
-                    const hasImageB = b.image_url && b.image_url.length > 5;
-
-                    if (hasImageA && !hasImageB) return -1;
-                    if (!hasImageA && hasImageB) return 1;
-
-                    // Randomize the rest to avoid boring A-Z every time?
-                    // User asked to avoid strict A-Z wait.
-                    // Let's shuffle slightly or use ID?
-                    // Let's just stick to alphabetical fallback but randomize if no image?
-                    // "The user has to wait... from a-z" suggests they want Variety.
-                    return 0.5 - Math.random();
-                });
-
-                // Client-side Effect Filter (safer than guessing DB schema)
+                // Apply Effect Filter (Server-Side) if user selected a specific effect
                 if (activeEffect) {
-                    sorted = sorted.filter(s =>
-                        (s.effects && s.effects.includes(activeEffect)) ||
-                        (s.description && s.description.toLowerCase().includes(activeEffect.toLowerCase()))
-                    );
+                    if (['Indica', 'Sativa', 'Hybrid'].includes(activeEffect)) {
+                        queryBuilder = queryBuilder.ilike('type', `%${activeEffect}%`);
+                    } else {
+                        queryBuilder = queryBuilder.contains('effects', [activeEffect]);
+                    }
                 }
 
-                setAllStrains(sorted);
-                setFilteredStrains(sorted);
+                // Limit results
+                queryBuilder = queryBuilder.limit(500);
+
+                const { data, error } = await queryBuilder;
+
+                if (error) throw error;
+
+                if (data) {
+                    let processedData = data;
+
+                    // Sort: Always put excellent images first if possible, then alphabetical
+                    processedData.sort((a, b) => {
+                        const hasImageA = a.image_url && a.image_url.length > 10;
+                        const hasImageB = b.image_url && b.image_url.length > 10;
+
+                        // Prioritize images
+                        if (hasImageA && !hasImageB) return -1;
+                        if (!hasImageA && hasImageB) return 1;
+
+                        return a.name.localeCompare(b.name);
+                    });
+
+                    setAllStrains(data); // Store raw fetched data (or at least the data matching server filters)
+                    setFilteredStrains(processedData);
+                }
+            } catch (err) {
+                console.error("Error fetching strains:", err);
+            } finally {
+                setIsLoading(false);
             }
-            setIsLoading(false);
         };
+
         fetchStrains();
-    }, [activeType, activeEffect]); // Refetch when filters change
+    }, [activeEffect]); // Refetch when filters change
 
     // Search Logic (Debounced)
     useEffect(() => {
         const performSearch = async () => {
             if (query.trim().length === 0) {
                 // Restore filters
-                if (allStrains.length > 0) setFilteredStrains(allStrains);
+                if (allStrains.length > 0) {
+                    setFilteredStrains(allStrains);
+                }
                 return;
             }
 
             // Local Search first (fast)
-            const local = allStrains.filter(s => s.name.toLowerCase().includes(query.toLowerCase()));
+            let local = allStrains.filter(s => s.name.toLowerCase().includes(query.toLowerCase()));
+
+
+
             if (local.length > 0) {
                 setFilteredStrains(local);
                 if (query.length < 4) return;
             }
 
             // Deep Server Search
-            const { data } = await supabase
+            let queryBuilder = supabase
                 .from('strains')
                 .select('*')
-                .ilike('name', `%${query}%`)
-                .limit(20);
+                .ilike('name', `%${query}%`);
 
-            if (data) setFilteredStrains(data);
+            const { data } = await queryBuilder.limit(20);
+
+            if (data) {
+                setFilteredStrains(data);
+            }
         };
 
         const timeout = setTimeout(performSearch, 300);
@@ -287,66 +351,79 @@ const StrainLibrary = ({ userLocation, user }) => {
                     </div>
                 </div>
 
-                {/* Filters */}
-                <div className="flex flex-wrap items-center gap-2 md:gap-4 overflow-x-auto pb-2 scrollbar-hide">
-                    {['All', 'Indica', 'Sativa', 'Hybrid'].map(type => (
-                        <button
-                            key={type}
-                            onClick={() => { setActiveType(type); setActiveEffect(null); }}
-                            className={`px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider transition-all whitespace-nowrap ${activeType === type
-                                ? 'bg-emerald-500 text-slate-950 shadow-[0_0_15px_rgba(16,185,129,0.4)]'
-                                : 'bg-slate-900/50 text-slate-500 border border-white/5 hover:text-emerald-400'
-                                }`}
-                        >
-                            {type}
-                        </button>
-                    ))}
-                    <div className="w-px h-6 bg-slate-800 mx-2 hidden md:block" />
-                    {['Sleep', 'Pain', 'Creative', 'Focus', 'Energy'].map(effect => (
-                        <button
-                            key={effect}
-                            onClick={() => { setActiveEffect(activeEffect === effect ? null : effect); }} // Toggle
-                            className={`px-3 py-1.5 rounded-lg text-xs font-medium border transition-all whitespace-nowrap flex items-center gap-1 ${activeEffect === effect
-                                ? 'bg-blue-500/20 border-blue-500 text-blue-400'
-                                : 'bg-transparent border-slate-800 text-slate-500 hover:border-slate-600'
-                                }`}
-                        >
-                            {activeEffect === effect && <Activity className="w-3 h-3" />}
-                            {effect}
-                        </button>
-                    ))}
+                {/* Filter Tabs */}
+                <div className="flex flex-col gap-4">
+
+
+                    {/* Secondary Filters (Effects) */}
+                    <div className="flex justify-center flex-wrap gap-2">
+                        {['Indica', 'Sativa', 'Hybrid', 'Sleep', 'Pain', 'Creative', 'Energy'].map(filter => (
+                            <button
+                                key={filter}
+                                onClick={() => {
+                                    // Complex filter logic could go here, for now just simple toggle support
+                                    setActiveEffect(activeEffect === filter ? null : filter);
+                                }}
+                                className={`px-3 py-1 rounded-lg text-xs font-medium border transition-all ${activeEffect === filter
+                                    ? 'bg-blue-500/20 border-blue-500 text-blue-400'
+                                    : 'bg-transparent border-slate-800 text-slate-500 hover:border-slate-600'}`}
+                            >
+                                {filter}
+                            </button>
+                        ))}
+                    </div>
                 </div>
             </div>
 
             {/* MAIN CONTENT AREA */}
             <AnimatePresence mode="wait">
 
-                {/* 1. HALLWAY VIEW (Infinite Carousel) */}
+                {/* 1. HALLWAY VIEW (Scrollable Carousel) */}
                 {viewMode === 'hallway' && (
-                    <div className="relative z-10 w-full h-full flex items-center overflow-hidden group">
-                        {/* Gradient Masks for smooth fade out at edges */}
-                        <div className="absolute left-0 top-0 bottom-0 w-32 bg-gradient-to-r from-slate-950 to-transparent z-20" />
-                        <div className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-slate-950 to-transparent z-20" />
+                    <div
+                        className="relative z-10 w-full h-full flex items-center group"
+                        onMouseEnter={handleInteractionStart}
+                        onMouseLeave={handleInteractionEnd}
+                        onTouchStart={handleInteractionStart}
+                        onTouchEnd={handleInteractionEnd}
+                    >
+                        {/* Gradient Masks */}
+                        <div className="absolute left-0 top-0 bottom-0 w-32 bg-gradient-to-r from-slate-950 to-transparent z-20 pointer-events-none" />
+                        <div className="absolute right-0 top-0 bottom-0 w-32 bg-gradient-to-l from-slate-950 to-transparent z-20 pointer-events-none" />
 
-                        <div
-                            className="flex gap-12 items-center animate-marquee group-hover:slow-down will-change-transform"
-                            style={{
-                                width: "fit-content",
-                                paddingLeft: "50vw",
-                                animationDuration: `${Math.max(120, filteredStrains.length * 40)}s`
-                            }}
+                        {/* Navigation Buttons (Visible on Hover/Interaction) */}
+                        <button
+                            onClick={() => scroll('left')}
+                            className="absolute left-8 z-30 p-3 rounded-full bg-slate-900/50 border border-white/10 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-emerald-500 hover:text-slate-900"
                         >
-                            {/* Duplicate list for seamless loop if we have enough items, otherwise just center */}
-                            {[...filteredStrains, ...filteredStrains, ...filteredStrains].map((strain, index) => (
-                                <StrainCard3D
-                                    key={`${strain.id}-${index}`}
-                                    strain={strain}
-                                    onClick={() => handleSelectStrain(strain)}
-                                />
+                            <ArrowRight className="w-6 h-6 rotate-180" />
+                        </button>
+
+                        <button
+                            onClick={() => scroll('right')}
+                            className="absolute right-8 z-30 p-3 rounded-full bg-slate-900/50 border border-white/10 text-white opacity-0 group-hover:opacity-100 transition-opacity hover:bg-emerald-500 hover:text-slate-900"
+                        >
+                            <ArrowRight className="w-6 h-6" />
+                        </button>
+
+                        {/* Scroll Container */}
+                        <div
+                            ref={scrollRef} // Attached ref
+                            className="w-full h-full overflow-x-auto flex items-center gap-8 px-[50vw] pb-12 snap-x snap-mandatory custom-scrollbar"
+                            style={{ scrollBehavior: isUserInteracting ? 'smooth' : 'auto' }} // Switch behavior for smooth drag vs linear auto-scroll
+                        >
+                            {filteredStrains.map((strain, index) => (
+                                <div key={`${strain.id}-${index}`} className="snap-center shrink-0 perspective-1000">
+                                    <StrainCard3D
+                                        strain={strain}
+                                        onClick={() => handleSelectStrain(strain)}
+                                        containerRef={scrollRef} // Pass ref for viewport detection
+                                    />
+                                </div>
                             ))}
 
-                            {filteredStrains.length === 0 && (
-                                <div className="text-slate-500 text-lg w-96 text-center">
+                            {filteredStrains.length === 0 && !isLoading && (
+                                <div className="text-slate-500 text-lg w-96 text-center shrink-0 snap-center">
                                     No strains found. Check spelling or visit the Lab.
                                 </div>
                             )}
@@ -450,9 +527,7 @@ const StrainLibrary = ({ userLocation, user }) => {
                                             <MapPin className="w-5 h-5" /> Locate Nearby
                                         </div>
                                     </button>
-                                    <button className="px-6 py-4 rounded-xl bg-slate-800 hover:bg-slate-700 text-white border border-white/5 transition-colors">
-                                        <Sparkles className="w-5 h-5" /> Gen Art
-                                    </button>
+
                                 </div>
 
                                 {/* Integrated Reviews */}
@@ -529,13 +604,17 @@ const StrainLibrary = ({ userLocation, user }) => {
 
 // --- Sub-Components ---
 
-const StrainCard3D = ({ strain, onClick }) => {
+const StrainCard3D = ({ strain, onClick, containerRef }) => {
     return (
         <motion.div
             layoutId={`card-${strain.id}`}
             onClick={onClick}
-            whileHover={{ scale: 1.1, y: -20, rotateY: 5 }}
-            className="flex-shrink-0 w-72 h-96 relative group cursor-pointer perspective-1000"
+            initial={{ scale: 0.85, opacity: 0.5, rotateY: 15 }}
+            whileInView={{ scale: 1.1, opacity: 1, rotateY: 0, y: -10 }}
+            viewport={{ root: containerRef, margin: "0px -200px 0px -200px" }} // Triggers when element is in center zone
+            transition={{ type: "spring", stiffness: 200, damping: 20 }}
+            whileHover={{ scale: 1.15, y: -30, zIndex: 100 }}
+            className="flex-shrink-0 w-72 h-96 relative group cursor-pointer perspective-1000 transition-all"
         >
             <div className="absolute inset-0 bg-gradient-to-br from-slate-900 to-black rounded-3xl border border-white/10 shadow-2xl overflow-hidden transform transition-transform duration-500 hover:shadow-[0_0_50px_rgba(16,185,129,0.3)]">
                 {/* Image Background */}

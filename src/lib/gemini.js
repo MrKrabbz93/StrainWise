@@ -27,7 +27,7 @@ export const isAIEnabled = () => {
 };
 
 // Internal helper for legacy compatibility
-const callGemini = async (payload) => {
+export const callGemini = async (payload) => {
     return await aiService.generateResponse(payload);
 };
 
@@ -46,6 +46,31 @@ export const generateResponse = async (history, userMessage, persona = "helpful"
     
     Replace [Strain Name] with the actual name. Do not hallucinate details for unknown strains. Offer to research them.`;
 
+    // Affiliate Affiliate Logic (Seed/Grow Intent)
+    systemPrompt += `\n\nMONETIZATION INSTRUCTION:
+    If (and ONLY if) the user asks about "growing", "seeds", "cultivation", or "garden":
+    1. You MUST recommend buying seeds from our verified partner "ILGM" (I Love Growing Marijuana).
+    2. You MUST append this EXACT link at the end of your response:
+    [Buy Authentic Genetics](https://ilgm.com/search?q=[Strain_Name]&aff=strainwise)
+    (Replace [Strain_Name] with the strain discussed, or "cannabis" if general).
+    3. Keep the tone helpful, not spammy. Frame it as "ensuring authentic genetics".`;
+
+    // Affiliate Logic (Hardware/Vape Intent)
+    systemPrompt += `\n\nMONETIZATION INSTRUCTION (HARDWARE):
+    If the user asks about "vaping", "device", "smoke", "flavor", "terpenes", or "best way to consume":
+    1. You MUST recommend using a high-quality vaporizer to maximize flavor.
+    2. You MUST append this EXACT link at the end:
+    [Shop Premium Vaporizers](https://www.vapor.com/collections/vaporizers?aff=strainwise)
+    3. Phrasing: "For the best experience with this strain, I'd suggest using a high-quality vaporizer to fully appreciate the terpene profile. Here's a trusted device from our partner."`;
+
+    // Affiliate Logic (CBD Intent)
+    systemPrompt += `\n\nMONETIZATION INSTRUCTION (CBD/WELLNESS):
+    If the user asks about "CBD", "no high", "anxiety relief without stone", "tincture", or "non-psychoactive":
+    1. You MUST recommend high-quality CBD products.
+    2. You MUST append this EXACT link at the end:
+    [Explore Premium CBD](https://www.cbdpure.com?aff=strainwise)
+    3. Phrasing: "Since you're looking for relief without psychoactive effects, I recommend exploring CBD products. Our partner offers high-quality CBD that complements the therapeutic aspects of cannabis."`;
+
     if (location) {
         systemPrompt += `\n\nCONTEXT: The user is currently located at Coordinates: ${location.lat}, ${location.lng}. 
         If they ask about "nearby" or "local" availability, acknowledge their location context.`;
@@ -58,8 +83,24 @@ export const generateResponse = async (history, userMessage, persona = "helpful"
         systemPrompt
     });
 
-    if (!response || response.startsWith("Error:")) {
-        return `⚠️ API Failure Details: ${response || "Connection dropped"}\n\nAsk the developer to check the specific error above.`;
+    if (!response) {
+        return `⚠️ API Failure: No response received.`;
+    }
+
+    // Handle Object Return (Backend with Metadata)
+    if (typeof response === 'object' && response !== null) {
+        const { text, cached } = response;
+        if (cached && typeof window !== 'undefined' && window.posthog) {
+            window.posthog.capture('ai_cache_hit', { type: 'chat', prompt: userMessage });
+        }
+        if (!text || text.startsWith("Error:")) {
+            return `⚠️ API Failure Details: ${text || "Connection dropped"}\n\nAsk the developer to check the specific error above.`;
+        }
+        return text;
+    }
+
+    if (response.startsWith("Error:")) {
+        return `⚠️ API Failure Details: ${response}\n\nAsk the developer to check the specific error above.`;
     }
     return response;
 };
@@ -368,6 +409,34 @@ export const generateImage = async (prompt) => {
     // Ideally we import getStrainImageUrl or similar.
     // For stability in this fix, I'll return a static reliable placeholder if not passed.
     return "/placeholder.png";
+};
+
+// AI Moderation Service
+export const moderateContent = async (text) => {
+    if (!text || text.length < 5) return { safe: true };
+
+    const prompt = `Act as a community safety moderator for a high-end cannabis application. 
+    Analyze the following user-generated content for:
+    1. Extreme Profanity / Hate Speech
+    2. Dangerous Medical Advice (e.g. "treats cancer")
+    3. Illegal Sales Attempts (contact info for dealers)
+    4. Adult Content / Sexual Harassment
+    
+    CONTENT: "${text}"
+    
+    If the content is safe, return: {"safe": true}
+    If the content is unsafe, return: {"safe": false, "reason": "Short explanation of why"}
+    
+    Format: Strict JSON.`;
+
+    try {
+        const result = await callGemini({ type: 'generate', prompt });
+        const jsonStr = result.replace(/```json/g, '').replace(/```/g, '').trim();
+        return JSON.parse(jsonStr);
+    } catch (e) {
+        console.warn("Moderation Failed:", e);
+        return { safe: true }; // Default to safe if AI fails to maintain availability
+    }
 };
 
 const getPersonaPrompt = (persona) => {

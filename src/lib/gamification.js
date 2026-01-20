@@ -11,8 +11,60 @@ export const RANKS = [
 
 export const XP_EVENTS = {
     ADD_STRAIN: 150,
-    WRITE_REVIEW: 50,
-    DAILY_LOGIN: 10
+    PUBLIC_REVIEW: 75,
+    PRIVATE_JOURNAL: 15,
+    DAILY_LOGIN: 10,
+    LIKE_RECEIVED: 5,
+    REFERRAL_SIGNUP: 250
+};
+
+export const BADGES = {
+    PIONEER: { id: 'pioneer', name: 'First Contact', icon: '🛰️', desc: 'First referral successful' },
+    CONNECTOR: { id: 'connector', name: 'Mycelium Connector', icon: '🕸️', desc: '5 pioneers invited' },
+    EVANGELIST: { id: 'evangelist', name: 'Strain Evangelist', icon: '📢', desc: '10 pioneers invited' },
+    NETWORK_LORD: { id: 'network_lord', name: 'Network Lord', icon: '🌍', desc: '50 pioneers invited' },
+    LEGENDARY_RECRUITER: { id: 'legendary', name: 'Legendary Recruiter', icon: '👑', desc: '100 pioneers invited' },
+    EARLY_ADOPTER: { id: 'early_adopter', name: 'Founding Member', icon: '💎', desc: 'Participated in the first 1000 users of the Mycelium network.' },
+};
+
+export const REFERRAL_MILESTONES = [
+    { count: 1, badge: BADGES.PIONEER },
+    { count: 5, badge: BADGES.CONNECTOR },
+    { count: 10, badge: BADGES.EVANGELIST },
+    { count: 50, badge: BADGES.NETWORK_LORD },
+    { count: 100, badge: BADGES.LEGENDARY_RECRUITER }
+];
+
+export const checkReferralMilestones = async (userId) => {
+    try {
+        const { count } = await supabase
+            .from('profiles')
+            .select('*', { count: 'exact', head: true })
+            .eq('referred_by', userId);
+
+        const { data: profile } = await supabase.from('profiles').select('badges').eq('id', userId).single();
+        if (!profile) return null;
+
+        const currentBadges = profile.badges || [];
+        const newBadges = [...currentBadges];
+        let newlyUnlocked = [];
+
+        REFERRAL_MILESTONES.forEach(m => {
+            if (count >= m.count && !currentBadges.includes(m.badge.id)) {
+                newBadges.push(m.badge.id);
+                newlyUnlocked.push(m.badge);
+            }
+        });
+
+        if (newlyUnlocked.length > 0) {
+            await supabase.from('profiles').update({ badges: newBadges }).eq('id', userId);
+            return newlyUnlocked;
+        }
+        return null;
+    } catch (e) {
+        console.error("Badge Error:", e);
+        return null;
+    }
 };
 
 export const getRank = (xp) => {
@@ -38,7 +90,15 @@ export const addXP = async (userId, amount, reason) => {
         // Check for Rank Up
         if (newRankObj.minXP > currentRankObj.minXP) {
             updates.rank = newRankObj.name;
-            rankUpMsg = `Congratulations! You've reached the rank of ${newRankObj.icon} ${newRankObj.name}!`;
+            rankUpMsg = `You've reached the rank of ${newRankObj.icon} ${newRankObj.name}!`;
+
+            // Trigger Premium Notification
+            try {
+                const { useUIStore } = await import('./stores/ui.store');
+                useUIStore.getState().addNotification(rankUpMsg, 'rank_up', 10000);
+            } catch (e) {
+                console.warn("Could not trigger rank up notification:", e);
+            }
 
             // Post Rank Up Shoutout
             await supabase.from('community_activity').insert([{
@@ -71,4 +131,29 @@ export const postStrainShoutout = async (userId, strainName) => {
     } catch (error) {
         console.error("Error posting shoutout:", error);
     }
+};
+
+export const awardEarlyAdopter = async (userId) => {
+    try {
+        const { data: profile } = await supabase.from('profiles').select('badges').eq('id', userId).single();
+        if (!profile || profile?.badges?.includes(BADGES.EARLY_ADOPTER.id)) return;
+
+        const { count } = await supabase.from('profiles').select('*', { count: 'exact', head: true });
+
+        if (count && count <= 1000) {
+            const newBadges = [...(profile?.badges || []), BADGES.EARLY_ADOPTER.id];
+            await supabase.from('profiles').update({ badges: newBadges }).eq('id', userId);
+
+            // Notification
+            try {
+                const { useUIStore } = await import('./stores/ui.store');
+                useUIStore.getState().addNotification(`💎 Awarded Badge: ${BADGES.EARLY_ADOPTER.name}`, 'badge', 10000);
+            } catch (e) { }
+
+            return true;
+        }
+    } catch (e) {
+        console.error("Early Adopter Error:", e);
+    }
+    return false;
 };

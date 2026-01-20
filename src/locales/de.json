@@ -1,0 +1,53 @@
+{
+    "welcome": {
+        "title": "StrainWise",
+        "subtitle": "Ihr persönlicher KI-Cannabis-Berater",
+        "getStarted": "Loslegen",
+        "login": "Anmelden"
+    },
+    "auth": {
+        "signIn": "Einloggen",
+        "signUp": "Registrieren",
+        "email": "E-Mail",
+        "password": "Passwort",
+        "continue": "Weiter"
+    },
+    "tabs": {
+        "consultant": "Berater",
+        "library": "Sorten",
+        "dispensaries": "Apotheken",
+        "profile": "Profil"
+    },
+    "profile": {
+        "favorites": "Favoriten",
+        "inbox": "Posteingang",
+        "community": "Community",
+        "sponsorship": "Sponsoring",
+        "sommelier": "KI-Sommelier",
+        "system": "System",
+        "settings": "Einstellungen",
+        "logout": "Abmelden",
+        "edit": "Profil bearbeiten",
+        "save": "Änderungen speichern",
+        "cancel": "Abbrechen",
+        "public": "Öffentlich",
+        "private": "Privat"
+    },
+    "sommelier": {
+        "title": "KI-Sommelier",
+        "desc": "Maßgeschneiderte Empfehlungen basierend auf Ihrem einzigartigen Geschmack.",
+        "curate": "Mein Menü zusammenstellen"
+    },
+    "system": {
+        "push_notifications": "Push-Benachrichtigungen",
+        "enable_tips": "Tägliche Tipps aktivieren",
+        "tips_enabled": "Tägliche Tipps aktiviert!",
+        "desc": "Erhalten Sie tägliche Sortenempfehlungen."
+    },
+    "landing": {
+        "tagline": "Premium-Cannabis-Intelligenz",
+        "description": "Erleben Sie die Zukunft der personalisierten Cannabis-Beratung. Unterstützt von fortschrittlicher KI, um Ihre Reise von der Neugier zum Kenner zu begleiten.",
+        "button": "Erfahrung betreten",
+        "footer": "Gegründet 2025 • Perth • WA"
+    }
+}

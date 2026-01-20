@@ -1,0 +1,32 @@
+version: '3.8'
+
+services:
+  marketing-agent:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.marketing
+    container_name: strainwise-marketing-agent
+    env_file:
+      - ../.env
+      - ../.env.marketing
+    environment:
+      - NODE_ENV=production
+    volumes:
+      - ../marketing:/app/marketing # Persist output
+    restart: always
+
+  outreach-agent:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.outreach
+    container_name: strainwise-outreach-agent
+    env_file:
+      - ../.env
+      - ../.env.marketing
+    environment:
+      - NODE_ENV=production
+      # Important: Playwright in Docker usually runs headless
+      - HEADLESS=true
+    volumes:
+      - ../marketing:/app/marketing # Persist history
+    restart: always

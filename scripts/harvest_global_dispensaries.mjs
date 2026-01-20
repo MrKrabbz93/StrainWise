@@ -1,12 +1,10 @@
 import { createClient } from '@supabase/supabase-js';
-import OpenAI from 'openai';
-import fetch from 'node-fetch';
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import dotenv from 'dotenv';
 dotenv.config();
 
 // --- CONFIGURATION ---
-const DEEP_SEARCH_MODE = true; // Use multiple queries per city
-const DELAY_MS = 2000;
+const DELAY_MS = 10000;
 
 // Target Locations
 const LOCATIONS = [
@@ -18,159 +16,100 @@ const LOCATIONS = [
     { country: "Canada", cities: ["Toronto", "Vancouver", "Montreal", "Calgary"] },
 ];
 
-// Search Variations to ensure Deep Coverage
-const QUERY_TEMPLATES = [
-    (city, country) => `medical cannabis dispensaries in ${city} ${country}`,
-    (city, country) => `best cannabis clinics ${city} ${country} reviews`,
-    (city, country) => `medicinal marijuana pharmacy ${city} ${country} list`,
-    (city, country) => `authorized prescriber prescribers cannabis ${city} ${country}`
-];
-
 // --- SETUP ---
 const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-const openaiKey = process.env.OPENAI_API_KEY;
-const tavilyKey = process.env.TAVILY_API_KEY;
+const geminiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
 
-if (!supabaseUrl || !supabaseKey || !openaiKey || !tavilyKey) {
-    console.error("❌ KEY ERROR: Check .env files.");
+if (!supabaseUrl || !supabaseKey || !geminiKey) {
+    console.error("❌ KEY ERROR: Check .env files. Need SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, GEMINI_API_KEY.");
     process.exit(1);
 }
 
 const supabase = createClient(supabaseUrl, supabaseKey);
-const openai = new OpenAI({ apiKey: openaiKey });
+const genAI = new GoogleGenerativeAI(geminiKey);
+const model = genAI.getGenerativeModel({
+    model: "gemini-1.5-flash",
+    tools: [{ googleSearch: {} }]
+});
+
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
 // --- FUNCTIONS ---
 
-async function searchTavily(query) {
-    console.log(`\n🔎 Digging: "${query}"...`);
-    try {
-        const response = await fetch('https://api.tavily.com/search', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                api_key: tavilyKey,
-                query: query,
-                search_depth: "advanced",
-                include_answer: true,
-                max_results: 12 // Get a good chunk per query
-            })
-        });
-        const data = await response.json();
-        return data.results || [];
-    } catch (e) {
-        console.error("Tavily Error:", e.message);
-        return [];
-    }
-}
-
-async function extractDispensaries(searchResults, city, country) {
-    if (!searchResults || searchResults.length === 0) return [];
-
-    const context = JSON.stringify(searchResults.map(r => ({ title: r.title, content: r.content, url: r.url })));
-
-    // Prompt designed to be aggressive about finding entities
-    const prompt = `
-    You are a Data Scraper. Analyze these search results for Cannabis Dispensaries/Clinics in ${city}, ${country}.
-    Results: ${context}
-
-    Task: Extract a COMPREHENSIVE list of PHYSICAL locations (Clinics, Dispensaries, Pharmacies).
-    - Include strictly "Medical" focused ones for AU/NZ/UK/DE.
-    - Include "Dispensaries" for Canada/Thailand.
-    - Try to find addresses and phone numbers if mentioned in snippets.
-    - DEDUPLICATE logically based on names.
-
-    Return JSON:
-    {
-        "dispensaries": [
-            {
-                "name": "Official Name",
-                "address": "Full Address (or City, State if vague)",
-                "website": "URL (best guess from source)",
-                "phone": "+Phone (if available)",
-                "type": "Dispensary/Clinic/Pharmacy"
-            }
-        ]
-    }
-    `;
-
-    try {
-        const completion = await openai.chat.completions.create({
-            messages: [{ role: "user", content: prompt }],
-            model: "gpt-4o-mini",
-            response_format: { type: "json_object" }
-        });
-        const parsed = JSON.parse(completion.choices[0].message.content);
-        return parsed.dispensaries || [];
-    } catch (e) {
-        console.error("AI Extraction Error:", e.message);
-        return [];
-    }
-}
+const allDispensaries = [];
 
 async function processCity(city, country) {
     console.log(`\n📍 PROCESSING: ${city}, ${country.toUpperCase()}`);
 
-    // 1. Gather raw results from ALL query variations
-    let allRawResults = [];
+    const prompt = `
+    Find physical medical cannabis dispensaries, clinics, or authorized pharmacies in ${city}, ${country}.
+    Use Google Search to find current, operating locations with addresses.
+    Task: Extract a list of at least 5-10 verified locations.
+    Return strictly JSON format: { "dispensaries": [ { "name": "Official Name", "address": "Full Street Address", "website": "URL", "phone": "Phone", "type": "Dispensary" } ] }
+    `;
 
-    // If Deep Mode, run all queries. If not, just the first one.
-    const queriesToRun = DEEP_SEARCH_MODE ? QUERY_TEMPLATES : [QUERY_TEMPLATES[0]];
+    try {
+        console.log(`   🤖 Agent searching...`);
+        const result = await model.generateContent({
+            contents: [{ role: 'user', parts: [{ text: prompt }] }],
+            generationConfig: { responseMimeType: "application/json" }
+        });
 
-    for (const tmpl of queriesToRun) {
-        const q = tmpl(city, country);
-        const results = await searchTavily(q);
-        allRawResults = [...allRawResults, ...results];
-        await sleep(1000); // Friendly rate limit
-    }
-
-    // 2. Extract with AI (Batch processing the mass of text)
-    // If too large, we might need to chunk? For now, sending ~40 snippets to GPT-4o-mini is mostly fine (128k context).
-    // Let's slice to top 30 unique URLs to be safe and efficient.
-    const uniqueResults = [];
-    const seenUrls = new Set();
-    allRawResults.forEach(r => {
-        if (!seenUrls.has(r.url)) {
-            seenUrls.add(r.url);
-            uniqueResults.push(r);
-        }
-    });
-
-    console.log(`   📝 Analyzing ${uniqueResults.length} unique search snippets...`);
-    const extractedList = await extractDispensaries(uniqueResults.slice(0, 40), city, country);
-    console.log(`   💡 AI identified ${extractedList.length} locations.`);
-
-    // 3. Save to DB
-    for (const d of extractedList) {
-        // Basic cleanup
-        if (!d.name || d.name.toLowerCase().includes("best dispensaries in")) continue;
-
-        const row = {
-            name: d.name,
-            country: country,
-            region: city, // Storing city in region col for now, or city col if schema matches
-            city: city,
-            address: d.address || `${city}, ${country}`,
-            website: d.website,
-            phone: d.phone,
-            rating: null // We don't have ratings from this easily
+        const responseText = result.response.text();
+        const extractFirstJson = (text) => {
+            const start = text.indexOf('{');
+            if (start === -1) return null;
+            let balance = 0;
+            for (let i = start; i < text.length; i++) {
+                if (text[i] === '{') balance++;
+                else if (text[i] === '}') balance--;
+                if (balance === 0) return text.substring(start, i + 1);
+            }
+            return null;
         };
 
-        const { error } = await supabase
-            .from('dispensaries')
-            .upsert(row, { onConflict: 'name, address', ignoreDuplicates: true });
+        const jsonStr = extractFirstJson(responseText);
+        if (!jsonStr) throw new Error("No JSON found");
 
-        if (error) {
-            // console.error(`   ❌ DB Error: ${error.message}`);
-        } else {
-            console.log(`   ✅ Saved: ${d.name} (${d.type || 'Location'})`);
+        const data = JSON.parse(jsonStr);
+        const list = data.dispensaries || [];
+
+        console.log(`   💡 Found ${list.length} locations.`);
+
+        // Add to collector
+        list.forEach(item => {
+            item.city = city;
+            item.country = country;
+            allDispensaries.push(item);
+        });
+
+        // Try Save to DB if keys exist
+        if (supabase) {
+            for (const d of list) {
+                if (!d.name) continue;
+                const row = {
+                    name: d.name,
+                    country: country,
+                    region: city,
+                    city: city,
+                    address: d.address || `${city}, ${country}`,
+                    website: d.website,
+                    phone: d.phone,
+                    rating: null
+                };
+                const { error } = await supabase.from('dispensaries').upsert(row, { onConflict: 'name, address', ignoreDuplicates: true });
+                if (!error) console.log(`      ✅ Saved to DB: ${d.name}`);
+            }
         }
+
+    } catch (e) {
+        console.error(`   ❌ Error processing ${city}:`, e.message);
     }
 }
 
 async function main() {
-    console.log("🌍 STARTING GLOBAL DISPENSARY DEEP SEARCH 🌍");
+    console.log("🌍 STARTING GLOBAL DISPENSARY DEEP SEARCH (GEMINI POWERED) 🌍");
 
     for (const loc of LOCATIONS) {
         console.log(`\n--- Starting Country: ${loc.country} ---`);
@@ -179,6 +118,15 @@ async function main() {
             await sleep(DELAY_MS);
         }
     }
+
+    // OUTPUT TO FILE
+    const outputPath = 'data/harvested_dispensaries.json';
+    import('fs').then(fs => {
+        if (!fs.existsSync('data')) fs.mkdirSync('data');
+        fs.writeFileSync(outputPath, JSON.stringify(allDispensaries, null, 2));
+        console.log(`\n💾 Saved ${allDispensaries.length} records to ${outputPath}`);
+    });
+
     console.log("\n🏁 GLOBAL SEARCH COMPLETE.");
 }
 

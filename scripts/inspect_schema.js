@@ -9,16 +9,18 @@ const client = new Client({
     ssl: { rejectUnauthorized: false }
 });
 
+const tableName = process.argv[2] || 'strains';
+
 async function inspect() {
     try {
         await client.connect();
         const res = await client.query(`
       SELECT column_name, data_type 
       FROM information_schema.columns 
-      WHERE table_name = 'strains';
-    `);
+      WHERE table_name = $1;
+    `, [tableName]);
 
-        console.log("Current 'strains' columns:");
+        console.log(`Current '${tableName}' columns:`);
         res.rows.forEach(r => console.log(`- ${r.column_name} (${r.data_type})`));
     } catch (err) {
         console.error("Error inspecting schema:", err);

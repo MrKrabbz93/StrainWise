@@ -6,22 +6,21 @@ This document is prepared for **GLM-4.6** to facilitate a smooth takeover of the
 **StrainWise** is a premium, AI-powered cannabis consultant application. It creates a personalized "Connoisseur" experience for users to discover strains, get medical advice, and track their cannabis journey.
 
 ### Key Features
-*   **AI Consultant:** A chat interface `AIService` supporting hybrid **OpenAI GPT-5.2** (primary) and Gemini. Features **AI Response Caching** for instant replies.
-*   **Global Dispensary Network:** Use `/dispensaries` to find clinics & pharmacies in **Australia, UK, Canada, Germany, Thailand, & New Zealand**.
+*   **AI Consultant:** A chat interface `AIService` supporting hybrid **OpenAI GPT-5.2** (primary) and Gemini. Features **AI Response Caching** and **Monetization Triggers** (Affiliate Links).
+*   **Strain Archives:** A 3D "Hallway" carousel with manual scrolling and image-first sorting. Includes a "Focus View" for deep dives.
+*   **Global Dispensary Network:** Use `/dispensaries` to find clinics & pharmacies.
 *   **Community Hub:** Public `CommunityFeed.jsx` where users share journals and reviews.
-*   **Analytics:** Integrated **PostHog** for granular user behavior tracking.
-*   **Gamification:** Users earn XP, Ranks ("Seedling" to "Master Grower"), and Badges.
+*   **Monetization Layer:** Integrated Affiliate Support for Seeds (ILGM), Hardware (Vapor.com), and CBD (CBDfx).
 
 ## 7. Current Status & Handover Notes
-*   **Status**: **DEPLOYED & STABLE**.
-*   **Deployment**: Hosted on **Vercel** (`https://cannabis-consultant.vercel.app`).
+*   **Status**: **DEPLOYED & STABLE (v1.2)**.
+*   **Deployment**: Hosted on **Vercel** (`https://strainwise.app`).
+*   **Traffic Stats**: Live users engaging with new "Buy Genetics" CTAs.
 *   **Recent Upgrades**:
-    *   **Performance**: `response_cache` table prevents expensive redundant AI calls.
-    *   **Data**: `dispensaries` table now holds global records populated by the Deep Harvest agent.
-    *   **Social**: `strain_journals` now supports public visibility.
-*   **Known Issues**:
-    *   Docker build works locally but we pivoted to Vercel for launch speed.
-    *   Ensure `OPENAI_API_KEY` is set in Vercel to enable the new extraction features.
+    *   **Monetization**: Complete Affiliate engine integrated into `StrainCard.jsx` and `gemini.js` (AI Prompts).
+    *   **UI/UX**: Replaced marquee with manual carousel functionality in Archives.
+    *   **Compliance**: Added "Beta Access" disclaimer step to `TutorialOverlay.jsx` and removed misleading "Gen Art" buttons.
+    *   **Coming Soon**: "Locate Nearby" features are temporarily disabled with "Coming Soon" badges until global inventory data is fully ready.
 
 *Antigravity (Google Deepmind), signing off. The foundation is rock solid. Good luck.*
 
@@ -41,123 +40,53 @@ The database uses PostgreSQL with Row Level Security (RLS) enabled.
 1.  **`public.profiles`**
     *   `id` (uuid, PK, refs auth.users)
     *   `username`, `bio`, `avatar_url`, `interests`
-    *   `is_public` (boolean)
+    *   `is_public` (boolean), `tutorial_completed` (boolean)
     *   `xp` (int), `rank` (text), `badges` (text[]) - *Gamification*
-    *   `account_type`, `subscription_status`
 
-2.  **`public.chat_history`**
-    *   `user_id`, `role` ("user"/"model"), `content`, `persona`.
+2.  **`public.strains`** (The Encyclopedia)
+    *   `id`, `name`, `description`, `type`, `thc`, `image_url`
+    *   `effects`, `terpenes`, `medical` (ARRAYS)
+    *   `affiliate_link` (text) - *New Field recommended for direct overrides*
 
-3.  **`public.favorites`**
-    *   `user_id`, `strain_name`, `visual_profile` (color theme).
-
-4.  **`public.community_activity`**
-    *   `user_id`, `type` ("rank_up", "review"), `content`, `metadata` (jsonb).
-
+3.  **`public.chat_history`**
+4.  **`public.favorites`**
 5.  **`public.dispensaries`**
-    *   `id`, `name`, `address`, `location` (lat/lng), `active_hours`.
-
-6.  **`public.dispensary_inventory`**
-    *   `dispensary_id`, `strain_id`, `price`, `in_stock`.
-
-7.  **`public.strain_journals`**
-    *   `user_id`, `strain_id`, `rating`, `effects` (tags), `activity_tags`.
-
-8.  **`public.ai_job_results`**
-    *   `msg_id`, `job_type`, `status`, `payload`, `result`, `error_message`.
-    *   *Managed by `ai-worker.js` and `pgmq`.*
-
-*Note: PGMQ Queue `ai_job_queue` allows async processing.*
+6.  **`public.strain_journals`**
 
 ## 4. Key File Manifest
 
-### `src/components/UserProfile.jsx` (Recently Refactored)
-*   **Status:** Cleaned up.
-*   **Structure:**
-    *   **Header:** Displays "Live Preview" of profile data.
-    *   **EditProfilePanel:** A dedicated sub-component extracted to the bottom of the file. Handles inputs for Username, Bio, and AI Avatar Generation.
-    *   **Tabs:** Favorites, Inbox, Community, Sommelier (AI Recommendations).
-*   **Key Logic:** "Nano Banana" AI Avatar generation calls `generateImage` in `gemini.js`.
-
-### `src/lib/gemini.js` (The Brain)
+### `src/lib/gemini.js` (The Brain & Salesman)
 *   **Status:** Advanced.
-*   **Capabilities:**
+*   **Updates:**
+    *   **System Prompt Injection**: Now contains specific logic to detect "growing", "vaping", or "CBD" intent and injects affiliate links for ILGM, Vapor.com, etc.
     *   `generateResponse()`: Multi-persona chat (Scientist/Connoisseur).
-    *   `identifyStrain()`: Vision API to analyze photos of buds.
-    *   `researchStrain()`: Uses Google Search Grounding to hallucinate/find real strain data.
-    *   `generateImage()`: Tries to use Imagen 3, falls back to DiceBear if 404.
 
-### `src/lib/` (Infrastructure - New)
-*   **`db.ts`**: Prisma Client instance with connection pooling configuration for production scaling (Neon Adapter).
-*   **`cache.ts`**: Multi-layer caching service (Redis + LRU Fallback).
-*   **`security.ts`**: JWT, Rate Limiting, and Sanitization services.
-*   **`api-handler.ts`**: Composable middleware factory for API routes (`withAuth`, `withValidation`).
-*   **`services/strain.service.ts`**: Business logic for Strains with integrated caching.
+### `src/components/StrainLibrary.jsx` & `StrainCard.jsx`
+*   **Status:** Polished.
+*   **Features:**
+    *   **Manual Carousel**: "Hallway View" uses snap-scrolling.
+    *   **Sort Logic**: Prioritizes strains with images (`sorted`).
+    *   **Affiliate CTA**: Renders "Buy Genetics" button linking to ILGM.
+    *   **Safety**: "Locate Nearby" disabled with "Coming Soon" overlay.
 
-### `api/` (Serverless Functions)
-*   **`strains.js`**: Standardized endpoint using `createApiHandler` and Zod validation.
-*   **`auth/`**: Authentication endpoints (Skeleton for custom JWT flow).
-
-### `src/App.jsx` & `src/components/Layout.jsx`
-*   Main routing and structural layout (Sidebar/Navigation).
-
-### `src/lib/stores/` (State Management)
-*   **`user.store.ts`**: Persistent auth state (Zustand).
-*   **`strain.store.ts`**: Strain data, filtering, favorites.
-*   **`consultant.store.ts`**: Chat sessions, optimistic updates, socket integration.
-*   **`ui.store.ts`**: Theme, sidebar, notifications.
-
-### `src/components/` (New Architecture)
-*   **`optimized/OptimizedImage.jsx`**: Lazy-loading image component.
-*   **`strains/StrainCard.jsx`**: Memoized card with variants.
-*   **`consultant/ConsultantChat.jsx`**: Real-time chat UI with animations.
-
-### `src/lib/services/` (Core & Real-Time)
-*   **`dispensary.service.ts`**: Geo-location queries & Inventory using Read Replicas.
-*   **`recommendation.service.ts`**: Hybrid AI scoring (Feedback + Journal + Activity context).
-*   **`activity-pairing.service.ts`**: Pattern recognition for strain-activity synergy.
-*   **`job.service.ts`**: Enqueue AI tasks to PGMQ (Server-Side).
-*   **`socket.service.ts`**: Websocket client for real-time updates.
-
-### `api/` (Serverless Functions)
-*   **`jobs.js`**: Authenticated endpoint to trigger Async AI jobs (POST) and check status (GET).
-*   **`strains.js`**: Standardized endpoint using `createApiHandler` and Zod validation.
-*   **`auth/`**: Authentication endpoints (Skeleton for custom JWT flow).
-
-### `src/workers/`
-*   **`ai-worker.js`**: Background polling worker (Docker enabled) that processes PGMQ jobs via `pop_ai_job`.
+### `src/components/TutorialOverlay.jsx`
+*   **Status:** Updated.
+*   **Features:** Includes new "Beta Access" disclaimer slide.
 
 ## 5. Environment Variables
 Ensure the following are set in `.env` (Local) and Deployment Environment Variables:
 ```bash
 VITE_GEMINI_API_KEY=AIzaSy...
 VITE_SUPABASE_URL=https://...
-VITE_SUPABASE_READ_REPLICA_URL=https://... (Optional: Load Balancer / Replica)
 VITE_SUPABASE_ANON_KEY=eyJ...
 SUPABASE_SERVICE_ROLE_KEY=eyJ... (Required for Backend API)
-OPENAI_API_KEY=sk-... (Optional, fallback provider)
-AI_PROVIDER=gemini (Default)
-DATABASE_URL=postgres://... (Transaction Pooler)
-DIRECT_URL=postgres://... (Session Mode for Migrations)
-PORT=4173
 ```
 
 ## 6. Deployment Guide
+1.  **Repo**: `mrkrabbz93/StrainWise`
+2.  **Host**: Vercel
+3.  **Command**: `npm run build` (Automatically triggers `vite build` + `prisma generate`)
+4.  **Production URL**: [https://strainwise.app](https://strainwise.app)
 
-### Option A: Vercel (Recommended for Serverless)
-1.  **Push** code to GitHub.
-2.  **Import** project in Vercel.
-3.  **Config**: Vercel will automatically detect Vite. The `vercel.json` handles API function routing.
-4.  **Env Vars**: Copy all variables from `.env` to Vercel Project Settings.
-
-### Option B: Docker / Railway (Recommended for Persistent Server)
-1.  **Repo**: Connect GitHub repo to Railway.
-2.  **Build**: Railway detects `Dockerfile` automatically.
-3.  **Env Vars**: Add all variables in Railway Dashboard.
-4.  **Start Command**: `npx tsx server.js` (Defined in Dockerfile).
-
-### Verification
-*   **Production URL**: Your deployed Vercel/Railway URL.
-*   **Health Check**: Visit `/api/gemini` (Method: OPTIONS or POST) to verify backend connectivity.
 
 

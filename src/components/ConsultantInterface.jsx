@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { MessageSquare, ArrowRight, Loader2, Sparkles, Bot, User, Camera, Brain, FlaskConical } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 import { generateResponse, isAIEnabled, identifyStrain } from '../lib/gemini';
 import { motion, AnimatePresence } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
@@ -169,14 +170,66 @@ const ConsultantInterface = ({ onRecommend, userLocation, externalInput, onInput
     const lowerInput = input.toLowerCase();
 
     // ... (existing categorization logic)
-    if (lowerInput.includes('sleep') || lowerInput.includes('insomnia')) {
-      recommendations = ['Granddaddy Purple', 'OG Kush'];
-    } else if (lowerInput.includes('focus') || lowerInput.includes('creative')) {
-      recommendations = ['Blue Dream', 'Jack Herer'];
-    } else if (lowerInput.includes('pain')) {
-      recommendations = ['Blue Dream', 'Granddaddy Purple'];
+    // Dynamic DB Search for Recommendations
+
+    // 1. Identify intent/keywords
+    const keywords = [];
+    if (lowerInput.match(/sleep|insomnia|night|rest/)) keywords.push('Sleep', 'Relaxed', 'Sleepy');
+    if (lowerInput.match(/pain|relief|ache|hurt|sore/)) keywords.push('Pain', 'Relief');
+    if (lowerInput.match(/energy|day|wake|focus|work/)) keywords.push('Energy', 'Uplifted', 'Focus');
+    if (lowerInput.match(/happy|mood|depress|sad/)) keywords.push('Happy', 'Euphoric');
+    if (lowerInput.match(/creative|art/)) keywords.push('Creative');
+
+    // 2. Fetch from DB if we have keywords
+    if (keywords.length > 0) {
+      try {
+        // We want strains that have ANY of these effects
+        // Since Supabase .contains() is AND for array, strictly. 
+        // .overlaps() is standard for "any common elements" in Postgres (&& operator).
+        // Supabase JS supports .overlaps() for array columns.
+        const { data: dbStrains } = await supabase
+          .from('strains')
+          .select('name')
+          .overlaps('effects', keywords)
+          .limit(5);
+
+        if (dbStrains && dbStrains.length > 0) {
+          recommendations = dbStrains.map(s => s.name);
+        }
+      } catch (err) {
+        console.error("Failed to fetch dynamic recommendations:", err);
+        // Fallback only on error
+        recommendations = ['Blue Dream', 'OG Kush'];
+      }
     } else {
-      recommendations = ['Blue Dream', 'OG Kush'];
+      // Fallback or Random if no keywords detected?
+      // Maybe check for "Indica" / "Sativa"
+      let type = null;
+      if (lowerInput.includes('indica')) type = 'Indica';
+      if (lowerInput.includes('sativa')) type = 'Sativa';
+
+      if (type) {
+        const { data: dbStrains } = await supabase
+          .from('strains')
+          .select('name')
+          .ilike('type', `%${type}%`)
+          .limit(5);
+        if (dbStrains) recommendations = dbStrains.map(s => s.name);
+      }
+    }
+
+    // If still empty, maybe don't recommend anything, or random?
+    // User hates generic specific ones. Let's leave empty if no context found.
+    // Or fetch *popular* strains via a different query if needed.
+    if (recommendations.length === 0 && input.length > 10) {
+      // Try a broad text search on name/description
+      const { data: searchResults } = await supabase
+        .from('strains')
+        .select('name')
+        .textSearch('description_search', `'${input.split(' ').slice(0, 2).join(' ')}'`) // Simple heuristic
+        .limit(3);
+
+      if (searchResults) recommendations = searchResults.map(s => s.name);
     }
 
     if (user && recommendations.length > 0) {
@@ -205,19 +258,26 @@ const ConsultantInterface = ({ onRecommend, userLocation, externalInput, onInput
   };
 
   return (
-    <div className="bg-slate-900/80 backdrop-blur-xl border border-white/10 rounded-2xl p-6 md:p-8 shadow-2xl shadow-emerald-900/10 flex flex-col h-[700px] relative overflow-hidden">
-      {/* Persona Selector Header */}
-      <div className="mb-4 pb-4 border-b border-white/5">
-        <div className="flex justify-between items-center mb-4">
-          <div className="flex items-center gap-3">
-            <Brain className="w-6 h-6 text-emerald-400" />
+    <div className="glass-card rounded-[2.5rem] p-4 md:p-8 shadow-2xl flex flex-col h-[750px] relative overflow-hidden">
+      {/* Premium Header Container */}
+      <div className="mb-6 relative z-20">
+        <div className="flex justify-between items-center mb-6">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-400 to-cyan-500 p-[1px] shadow-lg shadow-emerald-500/20">
+              <div className="w-full h-full bg-slate-950 rounded-[15px] flex items-center justify-center">
+                <Brain className="w-6 h-6 text-emerald-400" />
+              </div>
+            </div>
             <div>
-              <h3 className="text-white font-bold leading-none">AI Consultant</h3>
-              <span className="text-[10px] text-slate-500 uppercase tracking-widest">{PERSONAS.find(p => p.id === persona)?.desc}</span>
+              <h3 className="text-xl font-black text-white leading-none tracking-tight">AI Consultant</h3>
+              <div className="flex items-center gap-1.5 mt-1">
+                <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_#10b981]" />
+                <span className="text-[10px] text-slate-500 uppercase font-black tracking-widest">{PERSONAS.find(p => p.id === persona)?.desc}</span>
+              </div>
             </div>
           </div>
 
-          <div className="flex bg-slate-950 rounded-full p-1 border border-white/5">
+          <div className="flex bg-slate-950/50 backdrop-blur-md rounded-full p-1.5 border border-white/5 shadow-inner">
             {PERSONAS.map(p => {
               const Icon = p.icon;
               const isActive = persona === p.id;
@@ -225,71 +285,83 @@ const ConsultantInterface = ({ onRecommend, userLocation, externalInput, onInput
                 <button
                   key={p.id}
                   onClick={() => setPersona(p.id)}
-                  className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${isActive ? 'bg-emerald-500 text-slate-950 shadow-lg' : 'text-slate-400 hover:text-white hover:bg-white/5'}`}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-full text-[11px] font-black uppercase tracking-wider transition-all ${isActive ? 'bg-emerald-500 text-slate-950 shadow-emerald-500/20 shadow-lg' : 'text-slate-500 hover:text-white hover:bg-white/5'}`}
                   title={p.desc}
                 >
-                  <Icon className="w-3 h-3" />
-                  <span className="hidden md:inline">{p.name}</span>
+                  <Icon className="w-3.5 h-3.5" />
+                  <span className="hidden lg:inline">{p.name}</span>
                 </button>
               );
             })}
           </div>
         </div>
 
-        {/* Activity Context Selector */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-2 custom-scrollbar mask-linear-fade">
-          <span className="text-xs text-slate-500 uppercase font-bold tracking-wider shrink-0 mr-2">Context:</span>
-          {ACTIVITIES.map(activity => (
-            <button
-              key={activity}
-              onClick={() => setSelectedActivity(prev => prev === activity ? null : activity)}
-              className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wide border shrink-0 transition-all ${selectedActivity === activity
-                ? 'bg-blue-500 text-white border-blue-400 shadow-lg shadow-blue-500/20'
-                : 'bg-slate-900/50 text-slate-400 border-slate-700 hover:border-slate-500 hover:text-slate-200'
-                }`}
-            >
-              {activity}
-            </button>
-          ))}
+        {/* Activity Context Selector - Premium Scroll */}
+        <div className="relative group">
+          <div className="flex items-center gap-3 overflow-x-auto pb-4 custom-scrollbar no-scrollbar mask-linear-fade">
+            {ACTIVITIES.map(activity => (
+              <button
+                key={activity}
+                onClick={() => setSelectedActivity(prev => prev === activity ? null : activity)}
+                className={`px-5 py-2 rounded-2xl text-[10px] font-black uppercase tracking-widest border shrink-0 transition-all duration-300 ${selectedActivity === activity
+                  ? 'bg-emerald-500 border-emerald-400 text-slate-950 shadow-[0_5px_15px_rgba(16,185,129,0.3)] scale-105'
+                  : 'bg-slate-900/40 text-slate-500 border-white/5 hover:border-white/10 hover:text-slate-300 hover:bg-slate-900/60'
+                  }`}
+              >
+                {activity}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
+
+      {/* Messages Area - Immersive Background Overlay */}
+      <div className="absolute inset-0 z-0 opacity-5 pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/micro-carbon.png')]" />
 
       {/* Messages Container */}
       <div
         ref={messagesContainerRef}
-        className="flex-1 overflow-y-auto space-y-4 mb-6 pr-2 custom-scrollbar relative z-10 scroll-smooth"
+        className="flex-1 overflow-y-auto space-y-6 mb-8 pr-4 custom-scrollbar relative z-10 no-scrollbar"
       >
-        <AnimatePresence initial={false}>
+        <AnimatePresence initial={false} mode="popLayout">
           {messages.map((msg, idx) => (
             <motion.div
               key={idx}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}
+              initial={{ opacity: 0, y: 30, scale: 0.95 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              transition={{ type: "spring", damping: 20, stiffness: 100 }}
+              className={`flex gap-4 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}
             >
               {msg.role === 'system_action' ? (
-                <div className="w-full flex justify-center my-2">
+                <div className="w-full flex justify-center my-6">
                   <button
                     onClick={() => handleResearchAction(msg.content)}
-                    className="bg-emerald-500 hover:bg-emerald-400 text-slate-900 font-bold py-2 px-6 rounded-full flex items-center gap-2 shadow-lg shadow-emerald-500/20 transition-all hover:scale-105"
+                    className="premium-button flex items-center gap-3 group shadow-emerald-500/20"
                   >
-                    <Sparkles className="w-4 h-4" />
+                    <Sparkles className="w-4 h-4 group-hover:rotate-12 transition-transform" />
                     Research & Add "{msg.content}"
                   </button>
                 </div>
               ) : (
                 <>
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${msg.role === 'user' ? 'bg-emerald-500 text-slate-950' : 'bg-slate-700 text-emerald-400'}`}>
-                    {msg.role === 'user' ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
+                  <div className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 shadow-lg ${msg.role === 'user' ? 'bg-gradient-to-br from-emerald-500 to-emerald-600 text-slate-950' : 'bg-slate-800 text-emerald-400 border border-white/5'}`}>
+                    {msg.role === 'user' ? <User className="w-5 h-5" /> : <Bot className="w-5 h-5" />}
                   </div>
-                  <div className={`max-w-[85%] p-4 rounded-2xl text-sm leading-relaxed shadow-sm ${msg.role === 'user' ? 'bg-emerald-500/10 text-emerald-100 border border-emerald-500/20 rounded-tr-none' : 'bg-slate-800 text-slate-300 border border-slate-700 rounded-tl-none'}`}>
+                  <div className={`relative max-w-[80%] p-5 rounded-3xl text-sm leading-relaxed shadow-xl border ${msg.role === 'user'
+                    ? 'bg-emerald-500/5 text-emerald-50 border-emerald-500/20 rounded-tr-none'
+                    : 'bg-slate-900/60 backdrop-blur-md text-slate-200 border-white/5 rounded-tl-none'
+                    }`}>
                     {typeof msg.content === 'string' ? (
-                      <div className="prose prose-invert prose-sm max-w-none">
+                      <div className="prose prose-invert prose-emerald prose-sm max-w-none">
                         <ReactMarkdown>{msg.content}</ReactMarkdown>
                       </div>
                     ) : (
-                      JSON.stringify(msg.content)
+                      <pre className="text-[10px] text-emerald-400 font-mono p-2 bg-black/20 rounded-lg">{JSON.stringify(msg.content, null, 2)}</pre>
                     )}
+
+                    <div className={`absolute bottom-2 right-4 text-[8px] font-black uppercase tracking-widest opacity-20 ${msg.role === 'user' ? 'text-emerald-300' : 'text-slate-500'}`}>
+                      {msg.role === 'user' ? 'Verified' : 'Consultant'}
+                    </div>
                   </div>
                 </>
               )}
@@ -298,23 +370,28 @@ const ConsultantInterface = ({ onRecommend, userLocation, externalInput, onInput
         </AnimatePresence>
 
         {isLoading && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="flex gap-3">
-            <div className="w-8 h-8 rounded-full bg-slate-700 flex items-center justify-center shrink-0 text-emerald-400">
-              <Bot className="w-4 h-4" />
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="flex gap-4">
+            <div className="w-10 h-10 rounded-2xl bg-slate-800 flex items-center justify-center shrink-0 text-emerald-400 border border-white/5 shadow-lg">
+              <Bot className="w-5 h-5 animate-pulse" />
             </div>
-            <div className="bg-slate-800 border border-slate-700 rounded-2xl rounded-tl-none p-3 flex items-center gap-2">
-              <Loader2 className="w-4 h-4 animate-spin text-emerald-500" />
-              <span className="text-xs text-slate-400">
-                {persona === 'scientist' ? "Analyzing chemical compounds..." :
-                  persona === 'connoisseur' ? "Consulting the sommelier..." :
-                    "Thinking..."}
+            <div className="bg-slate-900/40 backdrop-blur-sm border border-white/5 rounded-3xl rounded-tl-none px-6 py-4 flex items-center gap-4">
+              <div className="flex gap-1">
+                <motion.span animate={{ scale: [1, 1.2, 1] }} transition={{ repeat: Infinity, duration: 1 }} className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
+                <motion.span animate={{ scale: [1, 1.2, 1] }} transition={{ repeat: Infinity, duration: 1, delay: 0.2 }} className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
+                <motion.span animate={{ scale: [1, 1.2, 1] }} transition={{ repeat: Infinity, duration: 1, delay: 0.4 }} className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
+              </div>
+              <span className="text-xs font-black uppercase tracking-widest text-slate-500">
+                {persona === 'scientist' ? "Analyzing..." :
+                  persona === 'connoisseur' ? "Reviewing..." :
+                    "Processing..."}
               </span>
             </div>
           </motion.div>
         )}
       </div>
 
-      <div className="relative mt-auto z-10 flex gap-2">
+      {/* Polish Input Area */}
+      <div className="relative z-20 mt-auto flex gap-3">
         <input
           type="file"
           accept="image/*"
@@ -325,31 +402,32 @@ const ConsultantInterface = ({ onRecommend, userLocation, externalInput, onInput
         <button
           onClick={() => fileInputRef.current?.click()}
           disabled={isLoading}
-          className="p-4 bg-slate-800 border border-white/10 text-slate-400 hover:text-emerald-400 hover:border-emerald-500/50 rounded-xl transition-all"
+          className="w-16 h-16 bg-slate-800/50 backdrop-blur-md border border-white/10 text-slate-500 hover:text-emerald-400 hover:border-emerald-500/30 rounded-2xl transition-all flex items-center justify-center shadow-lg active:scale-95 group"
           title="Identify Strain from Photo"
         >
-          <Camera className="w-5 h-5" />
+          <Camera className="w-6 h-6 group-hover:scale-110 transition-transform" />
         </button>
 
-        <input
-          type="text"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder={isAIEnabled() ? `Ask ${PERSONAS.find(p => p.id === persona)?.name}...` : "Describe your needs (Demo Mode)..."}
-          id="consultant-chat-input"
-          name="chatQuery"
-          className="w-full bg-slate-950/50 border border-white/10 rounded-xl py-4 px-6 pr-12 text-slate-200 focus:outline-none focus:border-emerald-500/50 focus:ring-1 focus:ring-emerald-500/50 transition-all placeholder:text-slate-600 backdrop-blur-sm"
-        />
-        <button
-          onClick={handleSend}
-          disabled={!input.trim() || isLoading}
-          className="absolute right-2 top-2 p-2 bg-emerald-500 hover:bg-emerald-600 disabled:opacity-50 disabled:cursor-not-allowed text-slate-950 rounded-lg transition-all shadow-lg shadow-emerald-500/20 hover:shadow-emerald-500/40 hover:scale-105 active:scale-95"
-        >
-          <ArrowRight className="w-5 h-5" />
-        </button>
+        <div className="relative flex-1 group">
+          <input
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder={isAIEnabled() ? `Message ${PERSONAS.find(p => p.id === persona)?.name}...` : "Demo Mode Active..."}
+            className="w-full h-16 bg-slate-950/80 border border-white/10 rounded-2xl py-4 px-8 pr-16 text-white font-medium focus:outline-none focus:border-emerald-500/40 focus:ring-4 focus:ring-emerald-500/5 transition-all placeholder:text-slate-700 shadow-xl group-hover:border-white/20"
+          />
+          <button
+            onClick={handleSend}
+            disabled={!input.trim() || isLoading}
+            className="absolute right-3 top-3 w-10 h-10 bg-emerald-500 hover:bg-emerald-400 disabled:opacity-30 disabled:grayscale text-slate-950 rounded-[14px] transition-all flex items-center justify-center shadow-lg shadow-emerald-500/30 hover:shadow-emerald-500/50 hover:scale-105 active:scale-90"
+          >
+            <ArrowRight className="w-5 h-5" />
+          </button>
+        </div>
       </div>
     </div>
+
   );
 };
 

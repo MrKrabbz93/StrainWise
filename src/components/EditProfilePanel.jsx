@@ -1,6 +1,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Camera, Save, X, Sparkles, User, FileText, Hash, Upload } from 'lucide-react';
+import ProfileImageUpload from './ProfileImageUpload';
 
 const EditProfilePanel = ({ editForm, setEditForm, onSave, onCancel, onGenerateAvatar, onUpload, isGenerating }) => {
 
@@ -35,38 +36,21 @@ const EditProfilePanel = ({ editForm, setEditForm, onSave, onCancel, onGenerateA
                 <div className="flex flex-col md:flex-row gap-6 items-start">
                     <div className="w-full md:w-1/3 flex flex-col items-center gap-4">
                         <div className="relative group">
-                            <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-slate-800 shadow-xl bg-slate-950 flex items-center justify-center relative">
-                                {editForm.avatar_url ? (
-                                    <img src={editForm.avatar_url} alt="Avatar" className="w-full h-full object-cover" />
-                                ) : (
-                                    <User className="w-12 h-12 text-slate-600" />
-                                )}
-
-                                {/* Hover Overlay for Upload */}
-                                <label className="absolute inset-0 bg-slate-900/60 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer">
-                                    <Upload className="w-6 h-6 text-white mb-1" />
-                                    <span className="text-[10px] text-white font-medium">Upload Photo</span>
-                                    <input
-                                        type="file"
-                                        className="hidden"
-                                        accept="image/jpeg,image/png,image/webp"
-                                        onChange={onUpload}
-                                    />
-                                </label>
-                            </div>
-
-                            {/* Generate Button (Floating) */}
-                            <button
-                                onClick={onGenerateAvatar}
-                                disabled={isGenerating}
-                                className="absolute -bottom-2 -right-2 p-2 bg-purple-600 hover:bg-purple-500 text-white rounded-full shadow-lg transition-transform hover:scale-110 disabled:opacity-50 border-2 border-slate-900"
-                                title="Generate AI Avatar"
-                            >
-                                {isGenerating ? <Sparkles className="w-4 h-4 animate-spin" /> : <Sparkles className="w-4 h-4" />}
-                            </button>
+                            <ProfileImageUpload
+                                imageUrl={editForm.avatar_url}
+                                onFileSelect={(file) => {
+                                    // Pass file directly to parent handler
+                                    if (onUpload) {
+                                        onUpload({ target: { files: [file] } });
+                                    }
+                                }}
+                                size="xl"
+                                editable={true}
+                                isLoading={isGenerating}
+                            />
                         </div>
                         <p className="text-xs text-slate-500 text-center max-w-[150px]">
-                            Upload a photo or tap <span className="text-purple-400 font-bold">Sparkles</span> to generate an AI avatar.
+                            Upload a photo to update your profile picture.
                         </p>
                     </div>
 

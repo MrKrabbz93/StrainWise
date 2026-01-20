@@ -1,19 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useTranslation } from 'react-i18next';
-import { User, Heart, LogOut, Loader2, Mail, Users, Globe, Lock, Edit2, Save, Briefcase, Sparkles, RefreshCw, Activity, Bell, Upload, ChevronRight, Trash2, FileText } from 'lucide-react';
+import { User, Heart, LogOut, Loader2, Mail, Users, Globe, Lock, Edit2, Save, Briefcase, Sparkles, RefreshCw, Activity, Bell, Upload, ChevronRight, Trash2, FileText, Percent, Tag, ExternalLink, CheckCircle2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { getPersonalizedRecommendation } from '../lib/gemini';
 import Leaderboard from './Leaderboard';
 import { scheduleDailyTip } from '../lib/notifications';
 import strainsData from '../data/strains.json';
 import { getStrainImageUrl } from '../lib/images';
+import { getRank, XP_EVENTS, BADGES } from '../lib/gamification';
 
 import { useUserStore } from '../lib/stores/user.store';
 import { updateProfile } from '../lib/services/user.service';
-import { generateImage } from '../lib/gemini';
+import { processImageForAvatar } from '../lib/image-utils';
 import EditProfilePanel from './EditProfilePanel';
 import EmptyState from './EmptyState';
+import DealsSection from './DealsSection';
 
 const UserProfile = ({ user: propUser, onLogout }) => {
     const { user: storeUser, setUser } = useUserStore();
@@ -61,7 +63,14 @@ const UserProfile = ({ user: propUser, onLogout }) => {
             // Fetch My Profile
             const { data: myProfile } = await supabase.from('profiles').select('*').eq('id', userId).single();
             if (myProfile) {
-                setProfile(myProfile);
+                // Fetch Referral Count
+                const { count: refCount } = await supabase
+                    .from('profiles')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('referred_by', userId);
+
+                const profileWithRefs = { ...myProfile, referral_count: refCount || 0 };
+                setProfile(profileWithRefs);
                 setEditForm({
                     username: myProfile.username || '',
                     bio: myProfile.bio || '',
@@ -69,7 +78,7 @@ const UserProfile = ({ user: propUser, onLogout }) => {
                     interests: myProfile.interests || '',
                     avatar_prompt: ''
                 });
-                setUser({ ...user, ...myProfile });
+                setUser({ ...user, ...profileWithRefs });
             }
 
             // Fetch Community
@@ -129,60 +138,47 @@ const UserProfile = ({ user: propUser, onLogout }) => {
         }
     };
 
-    const handleGenerateAvatar = async () => {
-        setIsGeneratingAvatar(true);
-        try {
-            const url = await generateImage(editForm.username);
-            setEditForm(prev => ({
-                ...prev,
-                avatar_url: url,
-                avatar_prompt: "AI Generated"
-            }));
-        } catch (error) {
-            console.error('Error generating avatar:', error);
-        } finally {
-            setIsGeneratingAvatar(false);
-        }
-    };
+    // handleGenerateAvatar removed per user request
 
     const handleSponsorship = async (tier) => {
         alert(`Initiating ${tier} sponsorship flow... (Demo)`);
     };
 
     const handleAvatarUpload = async (e) => {
-        const file = e.target.files[0];
+        const file = e.target.files?.[0]; // Safe access
         if (!file) return;
 
-        if (file.size > 2 * 1024 * 1024) {
-            alert("File size too large. Please upload an image under 2MB.");
+        // 1. Validation
+        if (file.size > 5 * 1024 * 1024) { // 5MB limit
+            alert("File size too large. Please use < 5MB.");
             return;
         }
-        if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
-            alert("Invalid file type. Please upload a JPG, PNG, or WebP image.");
-            return;
-        }
+
+        setIsGeneratingAvatar(true);
 
         try {
-            setIsGeneratingAvatar(true);
-            const fileExt = file.name.split('.').pop();
-            const fileName = `${user.id}-${Date.now()}.${fileExt}`;
-            const filePath = `${fileName}`;
+            // 2. Process (Resize + Base64) using our robust utility
+            // We now use direct Database storage (Base64) to bypass persistent Supabase Storage issues (CORS, Buckets, RLS).
+            // This is "Fix it once and for all" - 200px avatars are ~10KB and 100% reliable.
+            const base64Avatar = await processImageForAvatar(file, 200, 0.6);
 
-            const { error: uploadError } = await supabase.storage
-                .from('avatars')
-                .upload(filePath, file);
+            // 3. Update Profile & State Directly (Atomic)
+            const { data: { user: authUser } } = await supabase.auth.getUser();
+            if (authUser) {
+                await updateProfile({ id: authUser.id, avatar_url: base64Avatar });
 
-            if (uploadError) throw uploadError;
+                // Update UI state
+                const updater = (prev) => ({ ...prev, avatar_url: base64Avatar });
+                setProfile(prev => ({ ...prev, avatar_url: base64Avatar }));
+                setEditForm(prev => ({ ...prev, avatar_url: base64Avatar }));
 
-            const { data: { publicUrl } } = supabase.storage
-                .from('avatars')
-                .getPublicUrl(filePath);
-
-            setEditForm(prev => ({ ...prev, avatar_url: publicUrl }));
+                // Sync with Global Store
+                setUser({ ...user, avatar_url: base64Avatar });
+            }
 
         } catch (error) {
-            console.error("Avatar Upload Error:", error);
-            alert("Failed to upload image. (Ensure 'avatars' bucket exists in Supabase)");
+            console.error("Avatar Upload Critical Failure:", error);
+            alert("Failed to upload image. Please try again.");
         } finally {
             setIsGeneratingAvatar(false);
         }
@@ -236,14 +232,6 @@ const UserProfile = ({ user: propUser, onLogout }) => {
                             )}
                         </div>
 
-                        {isEditing && (
-                            <div className="absolute -bottom-12 left-1/2 -translate-x-1/2 flex flex-col gap-2 w-max z-30 opacity-0 group-hover:opacity-100 transition-opacity bg-slate-900/90 p-2 rounded-lg border border-white/10 shadow-xl backdrop-blur-md">
-                                <label className="flex items-center gap-2 text-xs text-slate-300 hover:text-white cursor-pointer px-2 py-1 hover:bg-white/5 rounded">
-                                    <input type="file" accept="image/*" className="hidden" onChange={handleAvatarUpload} />
-                                    <Upload className="w-3 h-3" /> Upload Photo
-                                </label>
-                            </div>
-                        )}
                     </div>
 
                     <div>
@@ -262,6 +250,22 @@ const UserProfile = ({ user: propUser, onLogout }) => {
                         <p className="text-slate-400 max-w-lg">
                             {isEditing ? (editForm.bio || 'New Bio...') : (profile?.bio || 'No bio yet.')}
                         </p>
+
+                        {/* Earned Badges */}
+                        {profile?.badges && profile.badges.length > 0 && (
+                            <div className="flex flex-wrap gap-2 mt-4">
+                                {Object.values(BADGES).filter(b => profile.badges.includes(b.id)).map(badge => (
+                                    <div
+                                        key={badge.id}
+                                        title={badge.desc}
+                                        className="px-3 py-1 bg-slate-800/50 border border-white/5 rounded-full flex items-center gap-2 hover:bg-slate-800 transition-colors cursor-help group"
+                                    >
+                                        <span className="text-sm group-hover:scale-125 transition-transform">{badge.icon}</span>
+                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-tighter">{badge.name}</span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
                     </div>
                 </div>
 
@@ -294,7 +298,7 @@ const UserProfile = ({ user: propUser, onLogout }) => {
                     setEditForm={setEditForm}
                     onSave={handleSaveProfile}
                     onCancel={() => setIsEditing(false)}
-                    onGenerateAvatar={handleGenerateAvatar}
+
                     onUpload={handleAvatarUpload}
                     isGenerating={isGeneratingAvatar}
                 />
@@ -311,11 +315,18 @@ const UserProfile = ({ user: propUser, onLogout }) => {
                 <button onClick={() => setActiveTab('community')} className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all whitespace-nowrap ${activeTab === 'community' ? 'bg-white/10 text-white' : 'text-slate-400 hover:text-white'}`}>
                     <Users className="w-4 h-4" /> Community
                 </button>
-                <button onClick={() => setActiveTab('sponsorship')} className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all whitespace-nowrap ${activeTab === 'sponsorship' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' : 'text-slate-400 hover:text-amber-400'}`}>
-                    <Briefcase className="w-4 h-4" /> Sponsorship
+                <button onClick={() => setActiveTab('deals')} className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all whitespace-nowrap ${activeTab === 'deals' ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20' : 'text-slate-400 hover:text-amber-400'}`}>
+                    <Percent className="w-4 h-4" /> Deals
+                </button>
+                <button onClick={() => setActiveTab('referrals')} className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all whitespace-nowrap ${activeTab === 'referrals' ? 'bg-indigo-500/10 text-indigo-400 border border-indigo-500/20' : 'text-slate-400 hover:text-indigo-400'}`}>
+                    <Users className="w-4 h-4" /> Referrals
+                </button>
+                <button onClick={() => setActiveTab('subscription')} className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all whitespace-nowrap ${activeTab === 'subscription' ? 'bg-blue-500/10 text-blue-400 border border-blue-500/20' : 'text-slate-400 hover:text-blue-400'}`}>
+                    <Briefcase className="w-4 h-4" /> Subscription
                 </button>
                 <button onClick={() => setActiveTab('sommelier')} className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all whitespace-nowrap ${activeTab === 'sommelier' ? 'bg-purple-500/10 text-purple-400 border border-purple-500/20' : 'text-slate-400 hover:text-purple-400'}`}>
                     <Sparkles className="w-4 h-4" /> AI Sommelier
+                    {profile?.subscription_tier !== 'pro' && <Lock className="w-3 h-3 ml-1 opacity-50" />}
                 </button>
                 <button onClick={() => setActiveTab('system')} className={`flex items-center gap-2 px-4 py-2 rounded-lg transition-all whitespace-nowrap ${activeTab === 'system' ? 'bg-slate-700 text-white border border-slate-600' : 'text-slate-500 hover:text-slate-300'}`}>
                     <Activity className="w-4 h-4" /> System Health
@@ -390,15 +401,139 @@ const UserProfile = ({ user: propUser, onLogout }) => {
                         </div>
                     )}
 
-                    {activeTab === 'sommelier' && (
-                        <SommelierView user={user} favorites={favorites} />
+                    {activeTab === 'deals' && (
+                        <DealsSection />
                     )}
 
-                    {activeTab === 'sponsorship' && (
-                        <div className="text-center py-12">
-                            <h3 className="text-white text-lg">Sponsorship Tier Selection</h3>
-                            <p className="text-slate-400">Available plans coming soon.</p>
+                    {activeTab === 'referrals' && (
+                        <div className="bg-slate-900 border border-slate-800 rounded-xl p-8 max-w-2xl mx-auto">
+                            <div className="text-center mb-10">
+                                <div className="w-16 h-16 bg-indigo-500/10 rounded-2xl flex items-center justify-center mx-auto mb-4 border border-indigo-500/20">
+                                    <Users className="w-8 h-8 text-indigo-400" />
+                                </div>
+                                <h3 className="text-2xl font-black text-white mb-2 italic tracking-tighter">THE PIONEER PROGRAM</h3>
+                                <p className="text-slate-400 text-sm">Help us grow the mycelium network and earn massive rewards.</p>
+                            </div>
+
+                            <div className="grid md:grid-cols-2 gap-6 mb-10">
+                                <div className="p-6 bg-slate-950 border border-white/5 rounded-2xl text-center">
+                                    <div className="text-3xl font-black text-white mb-1">{profile?.referral_count || 0}</div>
+                                    <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Successful Invites</div>
+                                </div>
+                                <div className="p-6 bg-slate-950 border border-white/5 rounded-2xl text-center">
+                                    <div className="text-3xl font-black text-emerald-400 mb-1">250 <span className="text-xs text-slate-600">XP</span></div>
+                                    <div className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Commission Per Signup</div>
+                                </div>
+                            </div>
+
+                            <div className="space-y-4">
+                                <label className="text-xs font-black text-slate-500 uppercase tracking-widest ml-1">Your Referral Link</label>
+                                <div className="flex gap-2">
+                                    <input
+                                        readOnly
+                                        value={`${window.location.origin}?ref=${profile?.referral_code || ''}`}
+                                        className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-sm font-mono text-slate-300 outline-none"
+                                    />
+                                    <button
+                                        onClick={() => {
+                                            navigator.clipboard.writeText(`${window.location.origin}?ref=${profile?.referral_code || ''}`);
+                                            alert("Link copied to mycelium clipboard!");
+                                        }}
+                                        className="px-6 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs uppercase tracking-widest rounded-xl transition-all"
+                                    >
+                                        Copy
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div className="mt-12 p-6 bg-indigo-500/5 rounded-2xl border border-indigo-500/10">
+                                <h4 className="text-sm font-bold text-indigo-100 mb-4 flex items-center gap-2">
+                                    <Sparkles className="w-4 h-4 text-indigo-400" /> Why Refer?
+                                </h4>
+                                <ul className="space-y-3">
+                                    {[
+                                        'Unlock exclusive badges for high-volume inviters',
+                                        'Reach high ranks 10x faster',
+                                        'Help build the world\'s most accurate strain database'
+                                    ].map((text, i) => (
+                                        <li key={i} className="flex gap-3 text-xs text-slate-400">
+                                            <div className="w-1 h-1 bg-indigo-500 rounded-full mt-1.5" />
+                                            {text}
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
                         </div>
+                    )}
+
+                    {activeTab === 'subscription' && (
+                        <div className="bg-slate-900 border border-slate-800 rounded-xl p-8 max-w-2xl mx-auto text-center">
+                            <div className="bg-gradient-to-br from-indigo-500 to-purple-600 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-xl shadow-purple-500/20">
+                                <Sparkles className="w-8 h-8 text-white" />
+                            </div>
+
+                            <h3 className="text-2xl font-bold text-white mb-2">Upgrade to StrainWise Pro</h3>
+                            <p className="text-slate-400 mb-8 max-w-md mx-auto">
+                                Unlock the full power of the AI Sommelier, get unlimited Dispensary Inventory checks, and support the platform.
+                            </p>
+
+                            <div className="grid md:grid-cols-2 gap-4 text-left mb-8">
+                                <div className="p-4 bg-white/5 rounded-lg border border-white/5 flex gap-3">
+                                    <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+                                    <span className="text-sm text-slate-300">Advanced AI Sommelier Recommendations</span>
+                                </div>
+                                <div className="p-4 bg-white/5 rounded-lg border border-white/5 flex gap-3">
+                                    <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+                                    <span className="text-sm text-slate-300">Unlimited Dispensary Searches</span>
+                                </div>
+                                <div className="p-4 bg-white/5 rounded-lg border border-white/5 flex gap-3">
+                                    <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+                                    <span className="text-sm text-slate-300">Ad-Free Experience</span>
+                                </div>
+                                <div className="p-4 bg-white/5 rounded-lg border border-white/5 flex gap-3">
+                                    <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
+                                    <span className="text-sm text-slate-300">Priority Support</span>
+                                </div>
+                            </div>
+
+                            <button
+                                onClick={async () => {
+                                    // Simple Payment Link Redirect
+                                    // This requires NO backend API code and uses the hosted link you created.
+                                    // We append client_reference_id to track which user paid.
+                                    const paymentLink = "https://buy.stripe.com/test_4gw28X5jF00d5IQaEE"; // Replaced with your probable test link structure or the one you pasted
+                                    // Note: You pasted a live link 'buy.stripe.com' vs 'buy.stripe.com/test'. 
+                                    // Since you are likely in test mode for dev, I'll use the one you provided but beware of real charges if it's live.
+                                    // Actually, let's use the one you pasted directly:
+                                    window.location.href = `https://buy.stripe.com/4gM00l3VqexX5pwe0l3Ru00?client_reference_id=${user.id}&prefilled_email=${user.email}`;
+                                }}
+                                className="w-full md:w-auto px-8 py-3 bg-white text-slate-900 font-bold rounded-xl hover:bg-emerald-400 transition-all transform hover:scale-105 shadow-xl shadow-white/10"
+                            >
+                                Upgrade for $17/mo
+                            </button>
+                            <p className="mt-4 text-xs text-slate-500">Secure payment via Stripe. Cancel anytime.</p>
+                        </div>
+                    )}
+
+                    {activeTab === 'sommelier' && (
+                        profile?.subscription_tier === 'pro' ? (
+                            <SommelierView user={user} favorites={favorites} />
+                        ) : (
+                            <div className="text-center py-12 bg-slate-900/50 border border-slate-800 rounded-xl">
+                                <Lock className="w-12 h-12 text-slate-700 mx-auto mb-4" />
+                                <h3 className="text-xl font-bold text-white mb-2">Pro Feature Locked</h3>
+                                <p className="text-slate-400 max-w-md mx-auto mb-6">
+                                    The AI Sommelier is available exclusively to Pro members.
+                                    Upgrade to get personalized deep-learning recommendations based on your unique palate.
+                                </p>
+                                <button
+                                    onClick={() => setActiveTab('subscription')}
+                                    className="px-6 py-2 bg-purple-600 hover:bg-purple-500 text-white font-bold rounded-lg transition-colors"
+                                >
+                                    Unlock AI Sommelier
+                                </button>
+                            </div>
+                        )
                     )}
 
                     {activeTab === 'system' && (

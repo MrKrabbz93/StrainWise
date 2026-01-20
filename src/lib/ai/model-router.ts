@@ -4,8 +4,8 @@ export const MODELS = {
     CLAUDE3_OPUS: 'claude-3-opus',
     CLAUDE3_SONNET: 'claude-3-sonnet',
     CLAUDE3_HAIKU: 'claude-3-haiku',
-    GEMINI_PRO: 'gemini-1.5-pro',
-    GEMINI_FLASH: 'gemini-1.5-flash',
+    GEMINI_PRO: 'gemini-3-flash-preview',
+    GEMINI_FLASH: 'gemini-3-flash-preview',
 };
 
 export const TASKS = {

@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { MapPin, Star, Search, Globe, ChevronDown, ExternalLink, Phone } from 'lucide-react';
+import { MapPin, Star, Search, Globe, ChevronDown, ExternalLink, Phone, Building2, Sparkles } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
-import posthog from '../lib/analytics';
+import posthog, { analytics } from '../lib/analytics';
+import ClaimBusinessModal from './ClaimBusinessModal';
+import { useUserStore } from '../lib/stores/user.store';
 
 const DispensaryList = () => {
     const [dispensaries, setDispensaries] = useState([]);
@@ -14,6 +16,8 @@ const DispensaryList = () => {
     const [selectedCountry, setSelectedCountry] = useState('All');
     const [selectedCity, setSelectedCity] = useState('All');
     const [searchQuery, setSearchQuery] = useState('');
+    const [claimingDispensary, setClaimingDispensary] = useState(null);
+    const user = useUserStore((state) => state.user);
 
     useEffect(() => {
         fetchDispensaries();
@@ -47,6 +51,7 @@ const DispensaryList = () => {
         const { data, error } = await supabase
             .from('dispensaries')
             .select('*')
+            .order('is_featured', { ascending: false })
             .order('name');
 
         if (data) {
@@ -170,7 +175,11 @@ const DispensaryList = () => {
                                             {d.name}
                                         </h3>
                                     </div>
-                                    {d.rating && (
+                                    {d.is_featured ? (
+                                        <div className="bg-emerald-500 text-slate-950 px-2 py-1 rounded-lg flex items-center gap-1 text-[10px] font-black uppercase tracking-tighter">
+                                            <Sparkles className="w-3 h-3 fill-current" /> Promoted
+                                        </div>
+                                    ) : d.rating && (
                                         <div className="bg-amber-500/10 text-amber-400 px-2 py-1 rounded-lg flex items-center gap-1 text-xs font-bold">
                                             <Star className="w-3 h-3 fill-current" /> {d.rating}
                                         </div>
@@ -192,17 +201,52 @@ const DispensaryList = () => {
 
                                 <div className="pt-4 border-t border-white/5 flex gap-3">
                                     <button
-                                        onClick={() => window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(d.name + ' ' + d.address)}`, '_blank')}
+                                        onClick={() => {
+                                            if (selectedCountry !== 'All') { // Optional: track region context
+                                                posthog.capture('dispensary_directions_click', { dispensary: d.name, country: d.country });
+                                            } else {
+                                                posthog.capture('dispensary_directions_click', { dispensary: d.name });
+                                            }
+                                            window.open(`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(d.name + ' ' + d.address)}`, '_blank')
+                                        }}
                                         className="flex-1 bg-slate-800 hover:bg-slate-700 text-white py-2 rounded-lg text-sm font-bold transition-all flex items-center justify-center gap-2"
                                     >
                                         <MapPin className="w-4 h-4" /> Directions
                                     </button>
                                     {d.website && (
                                         <button
-                                            onClick={() => window.open(d.website, '_blank')}
+                                            onClick={() => {
+                                                posthog.capture('dispensary_website_click', { dispensary: d.name, url: d.website });
+                                                window.open(d.website, '_blank');
+                                            }}
                                             className="px-4 py-2 bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 rounded-lg transition-all"
                                         >
                                             <ExternalLink className="w-4 h-4" />
+                                        </button>
+                                    )}
+                                </div>
+
+                                {/* Claim Business Badge */}
+                                <div className="mt-4 pt-3 border-t border-white/5 mx-[-1.5rem] px-6 text-center">
+                                    <button
+                                        onClick={() => {
+                                            analytics.track('claim_business_click', { dispensary: d.name });
+                                            setClaimingDispensary(d);
+                                        }}
+                                        className="text-[10px] uppercase font-bold text-slate-500 hover:text-emerald-400 transition-colors flex items-center justify-center gap-1.5 w-full py-1"
+                                    >
+                                        <Building2 className="w-3 h-3" />
+                                        Is this your business? <span className="underline">{d.is_featured ? 'Manage Listing' : 'Claim & Boost Now'}</span>
+                                    </button>
+                                    {!d.is_featured && (
+                                        <button
+                                            onClick={() => {
+                                                analytics.track('boost_listing_click', { dispensary: d.name });
+                                                window.open(`https://buy.stripe.com/4gM00l3VqexX5pwe0l3Ru00?client_reference_id=${d.id}&prefilled_email=${user?.email || ''}`, '_blank');
+                                            }}
+                                            className="mt-2 text-[9px] font-black text-emerald-400/60 hover:text-emerald-400 transition-all uppercase tracking-widest flex items-center justify-center gap-1"
+                                        >
+                                            <Sparkles className="w-2.5 h-2.5" /> Boost visibility for $49/mo
                                         </button>
                                     )}
                                 </div>
@@ -216,6 +260,13 @@ const DispensaryList = () => {
                     <h3 className="text-xl font-bold text-slate-400 mb-2">No Locations Found</h3>
                     <p className="text-slate-500">Try adjusting your filters or search query.</p>
                 </div>
+            )}
+
+            {claimingDispensary && (
+                <ClaimBusinessModal
+                    dispensary={claimingDispensary}
+                    onClose={() => setClaimingDispensary(null)}
+                />
             )}
         </div>
     );

@@ -1,0 +1,262 @@
+[
+    {
+        "id": "alternaleaf-au",
+        "name": "Alternaleaf Australia",
+        "region": "Australia",
+        "category": "Clinic",
+        "offer": "$20 Off Initial Consultation",
+        "type": "Referral",
+        "link": "https://www.alternaleaf.com.au/",
+        "code_pattern": "Requires Patient Portal Login",
+        "details": "Share the Care program - Referred patients pay $9 instead of $29 for first consult."
+    },
+    {
+        "id": "bloom-th",
+        "name": "Bloom Express Thailand",
+        "region": "Thailand",
+        "category": "Marketplace",
+        "offer": "50 THB Signup Bonus",
+        "type": "Referral",
+        "link": "https://bloom.express/",
+        "details": "Thailand's leading CBD & Cannabis Marketplace. Referral system uses Bloom Coins."
+    },
+    {
+        "id": "naturecan-th",
+        "name": "Naturecan Thailand",
+        "region": "Thailand",
+        "category": "CBD",
+        "offer": "Up to 20% Commission",
+        "type": "Affiliate",
+        "link": "https://www.naturecan.co.th/",
+        "details": "Premium CBD products. Offers bespoke discount codes for partners."
+    },
+    {
+        "id": "storz-bickel",
+        "name": "Storz & Bickel",
+        "region": "Global",
+        "category": "Hardware",
+        "offer": "5% Commission",
+        "type": "Affiliate",
+        "platform": "Awin / Shopper.com",
+        "link": "https://www.storz-bickel.com/",
+        "details": "Makers of the Volcano and Mighty vaporizers. High-ticket items."
+    },
+    {
+        "id": "puffco",
+        "name": "Puffco",
+        "region": "Global",
+        "category": "Hardware",
+        "offer": "$30 Off Devices / $30 Credit",
+        "type": "Referral",
+        "link": "https://www.puffco.com/",
+        "details": "Give $30, Get $30 model for devices over $150."
+    },
+    {
+        "id": "seedsman",
+        "name": "Seedsman",
+        "region": "Global",
+        "category": "Seeds",
+        "offer": "Up to 20% Commission",
+        "type": "Affiliate",
+        "link": "https://www.seedsman.com/",
+        "active_codes": [
+            "FAST15",
+            "SOM10"
+        ],
+        "details": "Major international seed bank with long-standing affiliate program."
+    },
+    {
+        "id": "ilgm",
+        "name": "I Love Growing Marijuana (ILGM)",
+        "region": "Global",
+        "category": "Seeds",
+        "offer": "20% Commission",
+        "type": "Affiliate",
+        "link": "https://ilgm.com/",
+        "details": "High conversion rates for cultivation niche."
+    },
+    {
+        "id": "herbies-au",
+        "name": "Herbies Seeds Australia",
+        "region": "Australia",
+        "category": "Seeds",
+        "offer": "Custom Commission",
+        "type": "Affiliate",
+        "link": "https://herbiesheadshop.com/",
+        "details": "Strong presence in the Australian growing community."
+    },
+    {
+        "id": "dutchie-b2b",
+        "name": "Dutchie POS",
+        "region": "Global/US/CA",
+        "category": "B2B Whale",
+        "offer": "Up to $500 per Referral",
+        "type": "B2B Referral",
+        "link": "https://dutchie.com/referrals",
+        "details": "Leading POS system. Huge revenue potential per verified dispensary lead."
+    },
+    {
+        "id": "blaze-b2b",
+        "name": "Blaze POS",
+        "region": "Global/US/CA",
+        "category": "B2B Whale",
+        "offer": "40% Lifetime Recurring Revenue",
+        "type": "Affiliate/B2B",
+        "link": "https://blaze.ai/affiliate-program/",
+        "details": "The most lucrative program found. 40% of their subscription revenue for life."
+    },
+    {
+        "id": "crop-king-seeds",
+        "name": "Crop King Seeds",
+        "region": "Global",
+        "category": "Seeds",
+        "offer": "20% Commission",
+        "type": "Affiliate",
+        "link": "https://www.cropkingseeds.com/",
+        "active_codes": [
+            "KING10"
+        ],
+        "details": "Premium seed bank. KING10 gives 10% off sitewide."
+    },
+    {
+        "id": "beaver-seeds",
+        "name": "Beaver Seeds",
+        "region": "Global",
+        "category": "Seeds",
+        "offer": "20% Commission",
+        "type": "Affiliate",
+        "link": "https://beaverseeds.com/",
+        "active_codes": [
+            "BVR1010",
+            "grow10"
+        ],
+        "details": "10% off with codes BVR1010 or grow10."
+    },
+    {
+        "id": "royal-queen-seeds",
+        "name": "Royal Queen Seeds",
+        "region": "Global/EU",
+        "category": "Seeds",
+        "offer": "Up to 20% Commission",
+        "type": "Affiliate",
+        "link": "https://www.royalqueenseeds.com/",
+        "active_codes": [
+            "HEAT25"
+        ],
+        "details": "Massive EU presence. HEAT25 for 25% off."
+    },
+    {
+        "id": "ardent-cannabis",
+        "name": "Ardent Cannabis",
+        "region": "Global/US",
+        "category": "Hardware",
+        "offer": "10-15% Commission",
+        "type": "Affiliate",
+        "link": "https://ardentcannabis.com/",
+        "active_codes": [
+            "HIGHBEAUTIFUL",
+            "TREAT"
+        ],
+        "details": "Decarboxylators and infusion machines. TREAT for $10 off."
+    },
+    {
+        "id": "smoke-cartel",
+        "name": "Smoke Cartel",
+        "region": "Global/US",
+        "category": "Gear",
+        "offer": "7-12% Commission",
+        "type": "Affiliate",
+        "link": "https://www.smokecartel.com/",
+        "active_codes": [
+            "SHARE420",
+            "BRITEBOGO"
+        ],
+        "details": "SHARE420 for 5% off year-round. BRITEBOGO for 50% off select."
+    },
+    {
+        "id": "daily-high-club",
+        "name": "Daily High Club",
+        "region": "Global/US",
+        "category": "Gear",
+        "offer": "10-20% Commission",
+        "type": "Affiliate",
+        "link": "https://dailyhighclub.com/",
+        "active_codes": [
+            "KHAN",
+            "COUPONDUOS"
+        ],
+        "details": "Subscription boxes and unique glass. KHAN for 10% off."
+    },
+    {
+        "id": "weed-street-th",
+        "name": "Weed Street Thailand",
+        "region": "Thailand",
+        "category": "Delivery",
+        "offer": "20-50% Off",
+        "type": "Discount Code",
+        "link": "https://bangkokstoners.com/",
+        "active_codes": [
+            "BSTONERSSTREET50",
+            "BSTONERSSTREET20"
+        ],
+        "details": "High-conversion codes for local delivery in Bangkok. 50% discount on select strains."
+    },
+    {
+        "id": "dr-green-th",
+        "name": "Dr Green Thailand",
+        "region": "Thailand",
+        "category": "Delivery",
+        "offer": "20-50% Off",
+        "type": "Discount Code",
+        "link": "https://bangkokstoners.com/",
+        "active_codes": [
+            "BSMONTHLY50",
+            "BANGKOKSTONERS20"
+        ],
+        "details": "Local Thai delivery. BSMONTHLY50 for 50% off monthly specials."
+    },
+    {
+        "id": "dr-dabber",
+        "name": "Dr. Dabber",
+        "region": "Global",
+        "category": "Hardware",
+        "offer": "20.9% Commission",
+        "type": "Affiliate",
+        "link": "https://www.drdabber.com/",
+        "details": "High-end electronic dab rigs. One of the highest hardware commission rates found (20%+)."
+    },
+    {
+        "id": "omura-x",
+        "name": "Omura",
+        "region": "Global",
+        "category": "Hardware",
+        "offer": "20% Referral / 30% Off",
+        "type": "Affiliate",
+        "link": "https://www.omura.com/",
+        "active_codes": [
+            "OMURA30",
+            "NEWYEAR20"
+        ],
+        "details": "Luxury Heat-not-Burn devices. OMURA30 for 30% off Series X."
+    },
+    {
+        "id": "leafio-au",
+        "name": "Leafio (Montu)",
+        "region": "Australia",
+        "category": "Medical Loyalty",
+        "offer": "Pharmacy Rewards",
+        "type": "Loyalty",
+        "link": "https://www.montu.com.au/",
+        "details": "B2B loyalty program for pharmacies. Tiered discounts and CPD access."
+    },
+    {
+        "id": "og-canna-passport",
+        "name": "OG Canna Passport",
+        "region": "Thailand",
+        "category": "Loyalty",
+        "offer": "Stamps & Prizes",
+        "type": "Loyalty",
+        "link": "https://ogcannacompany.com/",
+        "details": "Physical/Digital stamp program for multiple dispensaries in Thailand. High retention value."
+    }
+]

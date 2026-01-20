@@ -98,6 +98,8 @@ dist/
 dist-ssr/
 
 .vercel
+.chrome_profile
+.gemini
 
 /src/generated/prisma
 

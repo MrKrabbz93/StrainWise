@@ -48,11 +48,41 @@ const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
                 analytics.identify(newUser.id, { email: email });
                 analytics.track('signed_up', { method: 'email' });
 
-                // Generate AI Welcome Message
                 try {
+                    // Check for Referral
+                    const params = new URLSearchParams(window.location.search);
+                    const refCode = params.get('ref');
+                    let referredBy = null;
+
+                    if (refCode) {
+                        const { data: referrer } = await supabase
+                            .from('profiles')
+                            .select('id, username')
+                            .eq('referral_code', refCode)
+                            .single();
+
+                        if (referrer) {
+                            referredBy = referrer.id;
+                            // Award XP to referrer
+                            const { addXP, XP_EVENTS, checkReferralMilestones } = await import('../lib/gamification');
+                            await addXP(referrer.id, XP_EVENTS.REFERRAL_SIGNUP, `Referred new user: ${email}`);
+
+                            // Check for referral milestones
+                            const newBadges = await checkReferralMilestones(referrer.id);
+                            if (newBadges && newBadges.length > 0) {
+                                const { useUIStore } = await import('../lib/stores/ui.store');
+                                newBadges.forEach(b => {
+                                    useUIStore.getState().addNotification(`Unlocked Badge: ${b.icon} ${b.name}`, 'badge', 8000);
+                                });
+                            }
+                            console.log(`🎁 Referral bonus awarded to ${referrer.username}`);
+                        }
+                    }
+
+                    // Generate AI Welcome Message
                     const welcomeMsg = await generateWelcomeMessage(email.split('@')[0]);
 
-                    // Save to Inbox (Mock or Real)
+                    // Save to Inbox
                     await supabase.from('messages').insert([{
                         user_id: newUser.id,
                         sender: 'StrainWise AI',
@@ -66,7 +96,8 @@ const AuthModal = ({ isOpen, onClose, onLoginSuccess }) => {
                     await supabase.from('profiles').insert([{
                         id: newUser.id,
                         email: email,
-                        is_public: false // Default to private
+                        is_public: false,
+                        referred_by: referredBy
                     }]);
                 } catch (err) {
                     console.error("Error in welcome flow:", err);

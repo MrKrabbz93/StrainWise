@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { BookOpen, Users } from 'lucide-react';
+import { BookOpen, Users, Sparkles } from 'lucide-react';
 import { useLocation, useNavigate, Routes, Route } from 'react-router-dom';
 
 import Layout from './components/Layout';
@@ -22,8 +22,12 @@ import TutorialOverlay from './components/TutorialOverlay';
 import SubmitStrainForm from './components/SubmitStrainForm';
 import SubmitDispensaryForm from './components/SubmitDispensaryForm';
 import CommunityFeed from './components/CommunityFeed';
+import AdminDashboard from './components/admin/AdminDashboard';
+import Notifications from './components/Notifications';
+import AgeGate from './components/AgeGate';
 
 import { useUserStore } from './lib/stores/user.store';
+import { getRank, awardEarlyAdopter } from './lib/gamification';
 import { supabase } from './lib/supabase';
 import { PostHogProvider } from './providers/PostHogProvider';
 import posthog from './lib/analytics'; // Import direct instance
@@ -35,7 +39,7 @@ function App() {
   const navigate = useNavigate();
 
   // ... existing state
-  const [user, setUser] = useState(null);
+  const { user, setUser, logout } = userStore;
   const [recommendations, setRecommendations] = useState([]);
   const [dispensaries, setDispensaries] = useState([]);
   const [userLocation, setUserLocation] = useState(null);
@@ -58,23 +62,64 @@ function App() {
       setHasEntered(true);
     } else if (path === 'welcome') {
       setHasEntered(false); // Go to Landing
-    } else if (['strains', 'dispensaries', 'profile', 'consult', 'contribute', 'privacy', 'terms'].includes(path)) {
+    } else if (['strains', 'dispensaries', 'profile', 'consult', 'contribute', 'privacy', 'terms', 'community', 'admin'].includes(path)) {
       setActiveTab(path);
       if (!hasEntered) setHasEntered(true); // Ensure we are 'in' the app
     }
   }, [location, hasEntered]);
 
+  // Handle Auth Persistence and Profile Hydration
+  useEffect(() => {
+    // 1. Initial Check
+    const hydrateSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        // Fetch full profile (including avatar_url)
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
+
+        const userData = { ...session.user, ...profile };
+        setUser(userData);
+        userStore.setUser(userData);
+      }
+    };
+
+    hydrateSession();
+
+    // 2. Listen for Changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session?.user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
+        const userData = { ...session.user, ...profile };
+        setUser(userData);
+        userStore.setUser(userData);
+      } else {
+        setUser(null);
+        userStore.logout();
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    setUser(null);
-    userStore.logout();
+    logout();
     setActiveTab('consult');
     navigate('/consult'); // Sync Router
   };
 
-  const handleLoginSuccess = (user) => {
-    setUser(user);
+  const handleLoginSuccess = (profile) => {
+    setUser(profile);
     setShowAuthModal(false);
+    awardEarlyAdopter(profile.id);
   };
 
   const handleResetTutorial = () => {
@@ -101,7 +146,9 @@ function App() {
       if (error) throw error;
 
       if (data && data.length > 0) {
-        setRecommendations(data);
+        // Filter: Ensure visual quality by only showing strains with images
+        const validStrains = data.filter(s => s.image_url && s.image_url.length > 10);
+        setRecommendations(validStrains);
         setTimeout(() => {
           const element = document.getElementById('recommendations');
           if (element) {
@@ -119,143 +166,116 @@ function App() {
   };
 
   const renderContent = () => {
-    // Intercept for Detail Pages
-    if (activeTab === 'strain-detail') {
-      return <StrainPage />;
-    }
+    return (
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={activeTab}
+          initial={{ opacity: 0, y: 10, filter: "blur(10px)" }}
+          animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+          exit={{ opacity: 0, y: -10, filter: "blur(10px)" }}
+          transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+          className="w-full"
+        >
+          {(() => {
+            if (activeTab === 'strain-detail') return <StrainPage />;
 
-    switch (activeTab) {
-      case 'profile':
-        return <UserProfile user={user} onLogout={handleLogout} />;
-      case 'strains':
-        return <StrainLibrary userLocation={userLocation} user={user} />;
-      case 'dispensaries':
-        return <DispensaryList dispensaries={dispensaries} userLocation={userLocation} />;
-      case 'contribute':
-        return (
-          <div className="max-w-4xl mx-auto pt-10">
-            {/* Toggle Switch */}
-            <div className="flex justify-center mb-8">
-              <div className="bg-slate-900 border border-slate-800 rounded-full p-1 flex gap-1">
-                <button
-                  onClick={() => setContributeMode('strain')}
-                  className={`px-6 py-2 rounded-full text-sm font-bold transition-all ${contributeMode === 'strain'
-                    ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20'
-                    : 'text-slate-400 hover:text-white'
-                    }`}
-                >
-                  Add Strain
-                </button>
-                <button
-                  onClick={() => setContributeMode('dispensary')}
-                  className={`px-6 py-2 rounded-full text-sm font-bold transition-all ${contributeMode === 'dispensary'
-                    ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20'
-                    : 'text-slate-400 hover:text-white'
-                    }`}
-                >
-                  Add Dispensary
-                </button>
-              </div>
-            </div>
-
-            {contributeMode === 'strain' ? (
-              <SubmitStrainForm
-                user={user}
-                onSuccess={(strain) => {
-                  console.log("Strain added:", strain);
-                  // Optional
-                }}
-              />
-            ) : (
-              <SubmitDispensaryForm
-                user={user}
-                onSuccess={(dispensary) => {
-                  console.log("Dispensary added:", dispensary);
-                }}
-              />
-            )}
-          </div>
-        );
-
-      case 'journal':
-        return <JournalPage />;
-      case 'community':
-        return <CommunityFeed />;
-      case 'privacy':
-        return <PrivacyPolicy />;
-      case 'terms':
-        return <TermsOfService />;
-      case 'consult':
-      default:
-        return (
-          <div className="max-w-4xl mx-auto">
-            <div className="text-center mb-12">
-              <motion.h1
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.8, ease: "easeOut" }}
-                className="text-5xl md:text-7xl font-bold bg-gradient-to-r from-emerald-400 via-cyan-400 to-emerald-400 bg-clip-text text-transparent mb-6 bg-[length:200%_auto] animate-gradient"
-              >
-                Find Your Perfect Strain
-              </motion.h1>
-              <motion.p
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.3, duration: 0.8 }}
-                className="text-slate-400 text-lg md:text-xl max-w-2xl mx-auto"
-              >
-                AI-powered recommendations tailored to your unique needs and lifestyle.
-              </motion.p>
-            </div>
-
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.5, duration: 0.5 }}
-            >
-              <ConsultantInterface onRecommend={handleRecommendations} userLocation={userLocation} />
-            </motion.div>
-
-            <AnimatePresence>
-              {recommendations.length > 0 && (
-                <motion.div
-                  id="recommendations"
-                  initial={{ opacity: 0, y: 50 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: 50 }}
-                  transition={{ duration: 0.6 }}
-                  className="mt-20"
-                >
-                  <h2 className="text-3xl font-bold text-slate-100 mb-8 flex items-center gap-3">
-                    <span className="w-10 h-1.5 bg-gradient-to-r from-emerald-500 to-cyan-500 rounded-full"></span>
-                    Recommended for You
-                  </h2>
-                  <div className="grid md:grid-cols-2 gap-8">
-                    {recommendations.map((strain, index) => (
+            switch (activeTab) {
+              case 'profile': return <UserProfile user={user} onLogout={handleLogout} />;
+              case 'strains': return <StrainLibrary userLocation={userLocation} user={user} />;
+              case 'dispensaries': return <DispensaryList dispensaries={dispensaries} userLocation={userLocation} />;
+              case 'contribute':
+                return (
+                  <div className="max-w-4xl mx-auto pt-10">
+                    <div className="flex justify-center mb-8">
+                      <div className="bg-slate-950/50 backdrop-blur-md border border-white/5 rounded-full p-1.5 flex gap-1 shadow-inner">
+                        {['strain', 'dispensary'].map(mode => (
+                          <button
+                            key={mode}
+                            onClick={() => setContributeMode(mode)}
+                            className={`px-8 py-2.5 rounded-full text-xs font-black uppercase tracking-widest transition-all ${contributeMode === mode
+                              ? 'bg-emerald-500 text-slate-950 shadow-lg'
+                              : 'text-slate-500 hover:text-white'
+                              }`}
+                          >
+                            Add {mode}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    {contributeMode === 'strain' ? <SubmitStrainForm user={user} /> : <SubmitDispensaryForm user={user} />}
+                  </div>
+                );
+              case 'journal': return <JournalPage />;
+              case 'community': return <CommunityFeed />;
+              case 'admin': return <AdminDashboard />;
+              case 'privacy': return <PrivacyPolicy />;
+              case 'terms': return <TermsOfService />;
+              case 'consult':
+              default:
+                return (
+                  <div className="max-w-5xl mx-auto">
+                    <div className="text-center mb-20">
                       <motion.div
-                        key={strain.id}
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: index * 0.1 + 0.2 }}
+                        className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 mb-6"
                       >
-                        <StrainCard
-                          strain={strain}
-                          dispensaries={dispensaries}
-                          userLocation={userLocation}
-                        />
+                        <Sparkles className="w-3 h-3 text-emerald-400" />
+                        <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">Next-Gen Intelligence</span>
                       </motion.div>
-                    ))}
+                      <h1 className="text-6xl md:text-8xl font-black text-white mb-6 leading-[0.9] tracking-tighter">
+                        Find Your <br />
+                        <span className="premium-gradient-text">Perfect Harmony.</span>
+                      </h1>
+                      <p className="text-slate-400 text-lg md:text-xl max-w-2xl mx-auto font-medium opacity-80">
+                        AI-powered recommendations tailored to your unique biology and lifestyle.
+                      </p>
+                    </div>
+
+                    <div className="relative group">
+                      <div className="absolute -inset-1 bg-gradient-to-r from-emerald-500/20 to-cyan-500/20 rounded-[3rem] blur-2xl opacity-50 group-hover:opacity-100 transition duration-1000" />
+                      <ConsultantInterface onRecommend={handleRecommendations} userLocation={userLocation} />
+                    </div>
+
+                    <AnimatePresence>
+                      {recommendations.length > 0 && (
+                        <motion.div
+                          id="recommendations"
+                          initial={{ opacity: 0, y: 100 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="mt-32"
+                        >
+                          <div className="flex items-center gap-6 mb-12">
+                            <h2 className="text-4xl font-black text-white tracking-tighter">Recommended</h2>
+                            <div className="h-[2px] flex-1 bg-gradient-to-r from-white/10 to-transparent" />
+                          </div>
+                          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                            {recommendations.map((strain, index) => (
+                              <StrainCard
+                                key={strain.id}
+                                strain={strain}
+                                dispensaries={dispensaries}
+                                userLocation={userLocation}
+                              />
+                            ))}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        );
-    }
+                );
+            }
+          })()}
+        </motion.div>
+      </AnimatePresence>
+    );
   };
+
 
   return (
     <PostHogProvider>
+      <AgeGate />
+      <Notifications />
       <AnimatePresence mode="wait">
         {!hasEntered ? (
           <motion.div
@@ -267,22 +287,21 @@ function App() {
               setHasEntered(true);
               navigate('/consult');
               if (navigator.geolocation) {
-                console.log("Requesting user location...");
+                // Requesting user location
                 navigator.geolocation.getCurrentPosition(
                   (position) => {
-                    console.log("Location found:", position.coords);
+                    // Location found
                     setUserLocation({
                       lat: position.coords.latitude,
                       lng: position.coords.longitude
                     });
                   },
                   (error) => {
-                    console.warn("Location access denied or error:", error);
-                    if (error.code === 1) console.warn("User denied location services. Defaulting to 'null' (Global/Perth).");
+                    if (error.code === 1) { /* User denied location services. Defaulting to 'null' (Global/Perth). */ }
                   }
                 );
               } else {
-                console.warn("Geolocation is not supported by this browser.");
+                /* Geolocation is not supported by this browser. */
               }
               const seen = localStorage.getItem('strainwise_tutorial_seen');
               if (!seen) {

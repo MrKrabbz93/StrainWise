@@ -1,7 +1,7 @@
-import { prisma } from '../db';
-import { strainCache } from '../cache';
-import { logger } from '../logger';
-import { NotFoundError } from '../error-handler';
+import { prisma } from '../db.js';
+import { strainCache } from '../cache.js';
+import { logger } from '../logger.js';
+import { NotFoundError } from '../error-handler.js';
 
 export class StrainService {
     async getStrains({ page = 1, limit = 10, search, type, effect }) {
@@ -14,7 +14,7 @@ export class StrainService {
             return cached;
         }
 
-        const where = {};
+        const where: any = {};
         if (search) {
             where.OR = [
                 { name: { contains: search, mode: 'insensitive' } },

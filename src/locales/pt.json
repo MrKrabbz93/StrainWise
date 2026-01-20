@@ -1,0 +1,53 @@
+{
+    "welcome": {
+        "title": "StrainWise",
+        "subtitle": "O Seu Consultor de Canábis com IA Pessoal",
+        "getStarted": "Começar",
+        "login": "Entrar"
+    },
+    "auth": {
+        "signIn": "Iniciar Sessão",
+        "signUp": "Registar",
+        "email": "E-mail",
+        "password": "Senha",
+        "continue": "Continuar"
+    },
+    "tabs": {
+        "consultant": "Consultor",
+        "library": "Variedades",
+        "dispensaries": "Dispensários",
+        "profile": "Perfil"
+    },
+    "profile": {
+        "favorites": "Favoritos",
+        "inbox": "Mensagens",
+        "community": "Comunidade",
+        "sponsorship": "Patrocínio",
+        "sommelier": "Sommelier de IA",
+        "system": "Sistema",
+        "settings": "Definições",
+        "logout": "Sair",
+        "edit": "Editar Perfil",
+        "save": "Guardar Alterações",
+        "cancel": "Cancelar",
+        "public": "Público",
+        "private": "Privado"
+    },
+    "sommelier": {
+        "title": "Sommelier de IA",
+        "desc": "Recomendações personalizadas com base no seu gosto único.",
+        "curate": "Curar o Meu Menu"
+    },
+    "system": {
+        "push_notifications": "Notificações Push",
+        "enable_tips": "Ativar Dicas Diárias",
+        "tips_enabled": "Dicas Diárias Ativadas!",
+        "desc": "Receba recomendações diárias de variedades."
+    },
+    "landing": {
+        "tagline": "Inteligência de Canábis Premium",
+        "description": "Experimente o futuro da consultoria personalizada de canábis. Impulsionado por IA avançada para guiar a sua jornada da curiosidade à especialidade.",
+        "button": "Entrar na Experiência",
+        "footer": "Est. 2025 • Perth • WA"
+    }
+}

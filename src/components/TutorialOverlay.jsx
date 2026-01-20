@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageSquare, Globe, BookOpen, Sparkles, CheckCircle, ArrowRight, X, User } from 'lucide-react';
+import { MessageSquare, Globe, BookOpen, Sparkles, CheckCircle, ArrowRight, X, User, Lock } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 // High-impact visuals for each step
@@ -8,42 +8,52 @@ const STEPS = [
     {
         id: 'welcome',
         title: 'Welcome to StrainWise',
-        subtitle: 'Your Personal AI Cannabis Concierge',
+        subtitle: 'Your Personal AI Cannabis Sommelier',
         desc: 'Experience a new era of cannabis discovery. From medical precision to recreational nuances, we use advanced AI to find your perfect match.',
         icon: Sparkles,
-        image: 'https://images.unsplash.com/photo-1550684848-fac1c5b4e853?q=80&w=2070&auto=format&fit=crop', // Futuristic Hallway/Portal
+        image: 'https://images.unsplash.com/photo-1550684848-fac1c5b4e853?q=80&w=2070&auto=format&fit=crop',
         color: 'from-emerald-400 to-cyan-400',
         bg: 'bg-emerald-500/10'
     },
     {
-        id: 'consultant',
-        title: 'Expert AI Consultation',
-        subtitle: 'Science Meets Sensation',
-        desc: 'Chat with "The Scientist" to understand terpenes or "The Connoisseur" for flavor pairings. Our AI analyzes thousands of strains to answer your specific needs.',
-        icon: MessageSquare,
-        image: 'https://images.unsplash.com/photo-1620712943543-bcc4688e7485?q=80&w=1965&auto=format&fit=crop', // AI/Brain Abstract
-        color: 'from-purple-400 to-pink-400',
+        id: 'visual-ai',
+        title: 'Visual Intelligence',
+        subtitle: 'See Beyond the Leaf',
+        desc: 'Not sure what you are smoking? Snap a photo to identify potential genetics and analyze visual terpene indicators instantly using our computer vision engine.',
+        icon: Sparkles, // Or Camera if imported, but Sparkles works
+        image: 'https://images.unsplash.com/photo-1533038590840-1cde6e668a91?q=80&w=2187&auto=format&fit=crop', // Macro shot
+        color: 'from-purple-400 to-indigo-400',
         bg: 'bg-purple-500/10'
     },
     {
-        id: 'global',
-        title: 'Global Inventory',
-        subtitle: 'Find Stock Anywhere',
-        desc: 'Traveling? Locate dispensaries and check stock levels in Australia, Canada, UK, Germany, and Thailand with our real-time global map.',
-        icon: Globe,
-        image: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=2072&auto=format&fit=crop', // Earth/Network
-        color: 'from-cyan-400 to-blue-400',
-        bg: 'bg-cyan-500/10'
+        id: '3d-library',
+        title: 'Immersive 3D Archive',
+        subtitle: 'Award-Winning Design',
+        desc: 'Explore the world\'s most beautiful strain library. Scroll through our 3D holographic tunnel to discover rare genetics in a premium, tactile interface.',
+        icon: BookOpen,
+        image: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2128&auto=format&fit=crop', // Abstract 3D/Tunnel vibe
+        color: 'from-cyan-400 to-blue-500',
+        bg: 'bg-blue-500/10'
     },
     {
-        id: 'community',
-        title: 'Join the Inner Circle',
-        subtitle: 'Share & Discover',
-        desc: 'Read authentic journals from verified users. Share your own experiences to earn XP, unlock badges, and climb the "Master Grower" leaderboard.',
-        icon: User,
-        image: 'https://images.unsplash.com/photo-1511632765486-a01980e01a18?q=80&w=2070&auto=format&fit=crop', // Community/Gathering (Dark/Moody)
-        color: 'from-amber-400 to-orange-400',
+        id: 'pro',
+        title: 'Unlock StrainWise Pro',
+        subtitle: 'The Ultimate Experience',
+        desc: 'Upgrade to access the "Deep Sommelier" for hyper-personalized recommendations, unlimited global inventory searches, and an ad-free experience.',
+        icon: Lock, // Will need to import Lock or Star
+        image: 'https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?q=80&w=2148&auto=format&fit=crop', // Gold/Premium Abstract
+        color: 'from-amber-300 via-orange-400 to-yellow-500', // Gold gradient
         bg: 'bg-amber-500/10'
+    },
+    {
+        id: 'disclaimer-community',
+        title: 'Join the Beta',
+        subtitle: 'Community Driven',
+        desc: 'StrainWise is in active Beta. Share your knowledge, write journals, and help us map the world\'s cannabis supply. Together, we grow smarter.',
+        icon: Globe,
+        image: 'https://images.unsplash.com/photo-1556761175-5973dc0f32e7?q=80&w=2664&auto=format&fit=crop', // Community/Handshake
+        color: 'from-emerald-400 to-green-500',
+        bg: 'bg-emerald-500/10'
     }
 ];
 

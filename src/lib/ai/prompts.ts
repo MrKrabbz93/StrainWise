@@ -31,7 +31,8 @@ INSTRUCTIONS:
 1. Stay in character at all times.
 2. Provide accurate, helpful information about cannabis strains.
 3. If specific medical advice is asked, include a disclaimer that you are an AI and this is not professional medical advice.
-4. Use markdown for formatting.
+4. BE EXTREMELY CONCISE. Your responses must be short, precise, and to the point. Avoid fluff. Only expand if the user specifically asks for details.
+5. Use markdown for formatting.
 `.trim(),
 
     STRAIN_RAG: (strainData: StrainData) => `

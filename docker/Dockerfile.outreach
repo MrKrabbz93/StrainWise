@@ -1,0 +1,20 @@
+# Use the official Playwright image which includes all dependencies for Chromium
+FROM mcr.microsoft.com/playwright:v1.41.0-jammy
+
+WORKDIR /app
+
+# Copy package files
+COPY package.json package-lock.json* ./
+
+# Install production dependencies
+RUN npm ci --only=production
+
+# Copy application code
+COPY . .
+
+# Set environment
+ENV NODE_ENV=production
+
+# Run the outreach agent
+# Note: This expects the script to launch the browser internally (not CDP to host)
+CMD ["node", "scripts/outreach_agent.js"]

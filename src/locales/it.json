@@ -1,0 +1,53 @@
+{
+    "welcome": {
+        "title": "StrainWise",
+        "subtitle": "Il Tuo Consulente Personale per la Cannabis con IA",
+        "getStarted": "Inizia",
+        "login": "Accedi"
+    },
+    "auth": {
+        "signIn": "Accedi",
+        "signUp": "Registrati",
+        "email": "Email",
+        "password": "Password",
+        "continue": "Continua"
+    },
+    "tabs": {
+        "consultant": "Consulente",
+        "library": "Varietà",
+        "dispensaries": "Dispensari",
+        "profile": "Profilo"
+    },
+    "profile": {
+        "favorites": "Preferiti",
+        "inbox": "Messaggi",
+        "community": "Community",
+        "sponsorship": "Sponsorizzazione",
+        "sommelier": "Sommelier IA",
+        "system": "Sistema",
+        "settings": "Impostazioni",
+        "logout": "Esci",
+        "edit": "Modifica Profilo",
+        "save": "Salva Modifiche",
+        "cancel": "Annulla",
+        "public": "Pubblico",
+        "private": "Privato"
+    },
+    "sommelier": {
+        "title": "Sommelier IA",
+        "desc": "Raccomandazioni personalizzate basate sul tuo gusto unico.",
+        "curate": "Cura il Mio Menu"
+    },
+    "system": {
+        "push_notifications": "Notifiche Push",
+        "enable_tips": "Attiva Consigli Giornalieri",
+        "tips_enabled": "Consigli Giornalieri Attivati!",
+        "desc": "Ricevi raccomandazioni giornaliere sulle varietà."
+    },
+    "landing": {
+        "tagline": "Intelligenza Premium per la Cannabis",
+        "description": "Scopri il futuro della consulenza personalizzata sulla cannabis. Alimentato da un'IA avanzata per guidare il tuo viaggio dalla curiosità alla competenza.",
+        "button": "Entra nell'Esperienza",
+        "footer": "Fondato nel 2025 • Perth • WA"
+    }
+}

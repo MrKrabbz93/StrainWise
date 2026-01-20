@@ -10,7 +10,9 @@ class MetricsService {
                 errorCount: 0,
                 circuitBreakerOpens: 0,
                 responseTime: [],
-                providerUsage: { openai: 0, gemini: 0, anthropic: 0 }
+                providerUsage: { openai: 0, gemini: 0, anthropic: 0 },
+                cacheHitCount: 0,
+                redisFailureCount: 0
             },
             memoryService: {
                 shortTermSize: 0,
@@ -47,9 +49,13 @@ class MetricsService {
         }
     }
 
-    recordAiRequest(provider, responseTime, success) {
+    recordAiRequest(provider, responseTime, success, cached = false) {
         this.incrementCounter('aiService', 'requestCount');
         this.recordTiming('aiService', 'responseTime', responseTime);
+
+        if (cached) {
+            this.incrementCounter('aiService', 'cacheHitCount');
+        }
 
         if (provider && this.metrics.aiService.providerUsage[provider] !== undefined) {
             this.metrics.aiService.providerUsage[provider]++;

@@ -59,3 +59,48 @@ model UserActivity {
   @@index([timestamp])
 }
 
+
+model Profile {
+  id                  String   @id @default(uuid())
+  username            String?  @unique
+  bio                 String?
+  avatar_url          String?
+  base64_image        String?  // Fallback for direct image storage
+  interests           String?
+  is_public           Boolean  @default(false)
+  updated_at          DateTime @updatedAt
+
+  // Monetization / Subscription Fields
+  stripe_customer_id  String?  @unique
+  subscription_tier   String   @default("free") // 'free', 'pro', 'expert'
+  subscription_status String   @default("active") // 'active', 'past_due', 'canceled'
+  
+  @@map("profiles") // Maps to existing Supabase 'profiles' table if it exists
+}
+
+model StrainJournal {
+  id            Int      @id @default(autoincrement())
+  user_id       String   
+  strain_id     String
+  rating        Int?
+  dosage        String?
+  effects       String[]
+  notes         String?
+  activity_tags String[]
+  created_at    DateTime @default(now())
+  updated_at    DateTime @updatedAt
+
+  @@map("strain_journals")
+}
+
+model Favorite {
+  id             Int      @id @default(autoincrement())
+  user_id        String
+  strain_name    String
+  strain_id      String
+  type           String
+  visual_profile String?
+  created_at     DateTime @default(now())
+
+  @@map("favorites")
+}
