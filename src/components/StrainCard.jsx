@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Activity, Droplet, Brain, MapPin, Sparkles, Share2, X, Star, User, Book } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { generateCustomerReviews } from '../lib/gemini';
 import { motion, AnimatePresence } from 'framer-motion';
 import DispensaryMap from './DispensaryMap';
@@ -13,6 +14,7 @@ import { getDispensariesWithStrain } from '../lib/services/dispensary.service';
 
 const StrainCard = ({ strain, dispensaries, userLocation }) => {
     const user = useUserStore((state) => state.user);
+    const navigate = useNavigate();
     const [reviews, setReviews] = useState([]);
     const [isGenerating, setIsGenerating] = useState(true);
     const [showMap, setShowMap] = useState(false);
@@ -106,7 +108,11 @@ const StrainCard = ({ strain, dispensaries, userLocation }) => {
                 whileHover={{ y: -8, scale: 1.02 }}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="group relative glass-card rounded-3xl overflow-hidden transition-all duration-500 hover:shadow-emerald-500/10"
+                onClick={() => {
+                    const slug = strain.name.toLowerCase().replace(/\s+/g, '-');
+                    navigate(`/strain/${slug}`);
+                }}
+                className="group relative glass-card rounded-3xl overflow-hidden transition-all duration-500 hover:shadow-emerald-500/10 cursor-pointer"
             >
                 {/* 1. Hero Image Area (Aspect 3:2) */}
                 <div className="aspect-[4/3] relative overflow-hidden bg-slate-950">

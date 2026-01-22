@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { Search, FlaskConical, ArrowRight, Activity, Dna, Droplet, MapPin, Sparkles, X } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import OptimizedImage from './optimized/OptimizedImage';
@@ -13,6 +14,7 @@ import dispensariesData from '../data/dispensaries.json';
 import { useRef } from 'react'; // Added useRef
 const StrainLibrary = ({ userLocation, user }) => {
     const scrollRef = useRef(null); // Ref for carousel container
+    const navigate = useNavigate();
 
     // --- State ---
     const [viewMode, setViewMode] = useState('hallway'); // 'hallway' | 'focus' | 'lab'
@@ -116,7 +118,15 @@ const StrainLibrary = ({ userLocation, user }) => {
                 if (error) throw error;
 
                 if (data) {
-                    let processedData = data;
+                    // Filter out duplicates by name
+                    const uniqueNames = new Set();
+                    let processedData = data.filter(s => {
+                        if (!s.name) return false;
+                        const name = s.name.toLowerCase().trim();
+                        if (uniqueNames.has(name)) return false;
+                        uniqueNames.add(name);
+                        return true;
+                    });
 
                     // Sort: Always put excellent images first if possible, then alphabetical
                     processedData.sort((a, b) => {
@@ -130,7 +140,7 @@ const StrainLibrary = ({ userLocation, user }) => {
                         return a.name.localeCompare(b.name);
                     });
 
-                    setAllStrains(data); // Store raw fetched data (or at least the data matching server filters)
+                    setAllStrains(processedData);
                     setFilteredStrains(processedData);
                 }
             } catch (err) {
@@ -173,7 +183,15 @@ const StrainLibrary = ({ userLocation, user }) => {
             const { data } = await queryBuilder.limit(20);
 
             if (data) {
-                setFilteredStrains(data);
+                const uniqueNames = new Set();
+                const uniqueData = data.filter(s => {
+                    if (!s.name) return false;
+                    const name = s.name.toLowerCase().trim();
+                    if (uniqueNames.has(name)) return false;
+                    uniqueNames.add(name);
+                    return true;
+                });
+                setFilteredStrains(uniqueData);
             }
         };
 
@@ -186,14 +204,14 @@ const StrainLibrary = ({ userLocation, user }) => {
     const handleRandom = () => {
         if (filteredStrains.length > 0) {
             const random = filteredStrains[Math.floor(Math.random() * filteredStrains.length)];
-            setSelectedStrain(random);
-            setViewMode('focus');
+            const slug = random.name.toLowerCase().replace(/\s+/g, '-');
+            navigate(`/strain/${slug}`);
         }
     };
 
     const handleSelectStrain = (strain) => {
-        setSelectedStrain(strain);
-        setViewMode('focus');
+        const slug = strain.name.toLowerCase().replace(/\s+/g, '-');
+        navigate(`/strain/${slug}`);
     };
 
     const handleBackToHallway = () => {
@@ -431,113 +449,6 @@ const StrainLibrary = ({ userLocation, user }) => {
                     </div>
                 )}
 
-                {/* 2. FOCUS VIEW (The Brain) */}
-                {viewMode === 'focus' && selectedStrain && (
-
-                    <motion.div
-                        key="focus"
-                        initial={{ opacity: 0, y: 50 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: 50 }}
-                        className="fixed inset-0 z-[60] bg-slate-950/95 backdrop-blur-3xl flex items-center justify-center p-4 md:p-12 overflow-y-auto"
-                    >
-                        <button
-                            onClick={handleBackToHallway}
-                            className="absolute top-8 left-8 z-50 text-slate-400 hover:text-white flex items-center gap-2 bg-slate-900/50 px-4 py-2 rounded-full border border-white/5 transition-all hover:bg-emerald-500/20"
-                        >
-                            <ArrowRight className="w-5 h-5 rotate-180" /> Back to Archives
-                        </button>
-
-                        <div className="max-w-5xl w-full grid md:grid-cols-[400px_1fr] gap-12 items-center">
-                            {/* Left: Visual */}
-                            <motion.div
-                                initial={{ x: -50, opacity: 0 }}
-                                animate={{ x: 0, opacity: 1 }}
-                                transition={{ delay: 0.2 }}
-                                className="relative aspect-square rounded-[2rem] overflow-hidden shadow-2xl border border-white/10 group bg-slate-900"
-                            >
-                                <OptimizedImage
-                                    src={getStrainImageUrl(selectedStrain)}
-                                    alt={selectedStrain.name}
-                                    className="absolute inset-0 w-full h-full object-cover transition-transform duration-1000 group-hover:scale-105"
-                                />
-                                <div className="absolute inset-0 bg-gradient-to-tr from-black/80 via-transparent to-transparent" />
-
-                                <div className="absolute bottom-6 left-6">
-                                    <div className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider mb-2 border bg-black/50 backdrop-blur-md ${(selectedStrain.type || '').includes('Sativa') ? 'border-orange-500/50 text-orange-400' : 'border-purple-500/50 text-purple-400'}`}>
-                                        {selectedStrain.type || 'Hybrid'}
-                                    </div>
-                                    <h1 className="text-4xl font-black text-white leading-none mb-1">{selectedStrain.name}</h1>
-                                    <div className="flex gap-2">
-                                        {selectedStrain.effects?.slice(0, 3).map(e => (
-                                            <span key={e} className="text-xs font-medium text-slate-300">#{e}</span>
-                                        ))}
-                                    </div>
-                                </div>
-                            </motion.div>
-
-                            {/* Right: Data */}
-                            <motion.div
-                                initial={{ x: 50, opacity: 0 }}
-                                animate={{ x: 0, opacity: 1 }}
-                                transition={{ delay: 0.3 }}
-                                className="space-y-8"
-                            >
-                                <div>
-                                    <h3 className="text-emerald-400 font-mono text-sm mb-2">/// GENETIC DATA</h3>
-                                    <p className="text-xl leading-relaxed text-slate-300 font-light">
-                                        {selectedStrain.description || "A mysterious strain with potent effects..."}
-                                    </p>
-                                </div>
-
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div className="bg-slate-900/50 p-6 rounded-2xl border border-white/5">
-                                        <div className="flex items-center gap-2 text-slate-500 mb-2">
-                                            <Activity className="w-4 h-4" /> THC
-                                        </div>
-                                        <div className="text-3xl font-bold text-white">{selectedStrain.thc}</div>
-                                    </div>
-                                    <div className="bg-slate-900/50 p-6 rounded-2xl border border-white/5">
-                                        <div className="flex items-center gap-2 text-slate-500 mb-2">
-                                            <Dna className="w-4 h-4" /> Lineage
-                                        </div>
-                                        <div className="text-lg font-bold text-white truncate">{selectedStrain.lineage || "Unknown"}</div>
-                                    </div>
-                                </div>
-
-                                <div className="space-y-4">
-                                    <h4 className="flex items-center gap-2 text-slate-400 font-bold uppercase text-xs tracking-wider">
-                                        <Droplet className="w-4 h-4" /> Terpene Profile
-                                    </h4>
-                                    <div className="flex flex-wrap gap-2">
-                                        {selectedStrain.terpenes?.map(t => (
-                                            <span key={t} className="px-4 py-2 rounded-lg bg-blue-500/10 text-blue-300 border border-blue-500/20 text-sm">
-                                                {t}
-                                            </span>
-                                        ))}
-                                    </div>
-                                </div>
-
-                                <div className="pt-8 flex gap-4">
-                                    <button
-                                        onClick={handleFindNearby}
-                                        className="flex-1 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-4 rounded-xl shadow-[0_0_20px_rgba(16,185,129,0.3)] transition-all transform hover:scale-[1.02]"
-                                    >
-                                        <div className="flex items-center justify-center gap-2">
-                                            <MapPin className="w-5 h-5" /> Locate Nearby
-                                        </div>
-                                    </button>
-
-                                </div>
-
-                                {/* Integrated Reviews */}
-                                <div className="pt-8 border-t border-white/5">
-                                    <StrainReviews strainName={selectedStrain.name} />
-                                </div>
-                            </motion.div>
-                        </div>
-                    </motion.div>
-                )}
 
                 {/* 3. LAB VIEW (Simplified) */}
                 {viewMode === 'lab' && (

@@ -49,14 +49,14 @@ export default async function handler(req, res) {
                 if (!openaiKey) throw new Error("OpenAI API Key missing on server.");
 
                 const openai = new OpenAI({ apiKey: openaiKey });
-                const model = preferredModel || "gpt-5.2";
+                const model = preferredModel || "gpt-4o-mini";
 
                 const completionConfig = {
                     model: model,
                     max_tokens: 1000,
                 };
 
-                if (model.includes("gpt-5") || model.startsWith("o1")) {
+                if (model.startsWith("o")) {
                     completionConfig.reasoning_effort = reasoningEffort || "medium";
                     delete completionConfig.max_tokens;
                     completionConfig.max_completion_tokens = 1000;

@@ -9,6 +9,11 @@ export default defineConfig({
       '/api': 'http://localhost:3001'
     }
   },
+  resolve: {
+    alias: {
+      'react-is': 'react-is'
+    }
+  },
   plugins: [
     react(),
     VitePWA({

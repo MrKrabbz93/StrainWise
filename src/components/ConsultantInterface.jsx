@@ -159,7 +159,11 @@ const ConsultantInterface = ({ onRecommend, userLocation, externalInput, onInput
 
     } catch (error) {
       console.error("Chat Error:", error);
-      setMessages(prev => [...prev, { role: 'assistant', content: "I apologize, but I'm having trouble connecting right now. Please try again." }]);
+      const errorMsg = error.message || "Unknown connection issue";
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: `⚠️ **Consultant Connection Error**\n\nI apologize, but I'm having trouble connecting to my knowledge base right now.\n\n*Technical Details: ${errorMsg}*\n\nPlease try again in a few moments or alert the administrator.`
+      }]);
     } finally {
       setIsLoading(false);
     }

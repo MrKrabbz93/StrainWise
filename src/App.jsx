@@ -52,14 +52,14 @@ function App() {
 
   // Sync Router Location to State
   useEffect(() => {
-    const path = location.pathname.substring(1); // remove slash
+    const path = location.pathname.substring(1).split('/')[0]; // get base path
 
     // Analytics: Track Pageview
     posthog.capture('$pageview');
 
-    if (path.startsWith('strain/')) {
-      setActiveTab('strain-detail');
-      setHasEntered(true);
+    if (location.pathname.startsWith('/strain/')) {
+      setActiveTab('strains'); // Keep 'strains' tab active for sub-pages
+      if (!hasEntered) setHasEntered(true);
     } else if (path === 'welcome') {
       setHasEntered(false); // Go to Landing
     } else if (['strains', 'dispensaries', 'profile', 'consult', 'contribute', 'privacy', 'terms', 'community', 'admin'].includes(path)) {
@@ -146,8 +146,15 @@ function App() {
       if (error) throw error;
 
       if (data && data.length > 0) {
-        // Filter: Ensure visual quality by only showing strains with images
-        const validStrains = data.filter(s => s.image_url && s.image_url.length > 10);
+        // Filter: Ensure visual quality by only showing strains with images AND filter duplicates
+        const uniqueNames = new Set();
+        const validStrains = data.filter(s => {
+          if (!s.name || !(s.image_url && s.image_url.length > 10)) return false;
+          const name = s.name.toLowerCase().trim();
+          if (uniqueNames.has(name)) return false;
+          uniqueNames.add(name);
+          return true;
+        });
         setRecommendations(validStrains);
         setTimeout(() => {
           const element = document.getElementById('recommendations');
@@ -169,103 +176,98 @@ function App() {
     return (
       <AnimatePresence mode="wait">
         <motion.div
-          key={activeTab}
+          key={location.pathname}
           initial={{ opacity: 0, y: 10, filter: "blur(10px)" }}
           animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
           exit={{ opacity: 0, y: -10, filter: "blur(10px)" }}
           transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
           className="w-full"
         >
-          {(() => {
-            if (activeTab === 'strain-detail') return <StrainPage />;
+          <Routes>
+            <Route path="/" element={<ConsultantInterface onRecommend={handleRecommendations} userLocation={userLocation} />} />
+            <Route path="/consult" element={
+              <div className="max-w-5xl mx-auto">
+                <div className="text-center mb-20">
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 mb-6"
+                  >
+                    <Sparkles className="w-3 h-3 text-emerald-400" />
+                    <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">Next-Gen Intelligence</span>
+                  </motion.div>
+                  <h1 className="text-6xl md:text-8xl font-black text-white mb-6 leading-[0.9] tracking-tighter">
+                    Find Your <br />
+                    <span className="premium-gradient-text">Perfect Harmony.</span>
+                  </h1>
+                  <p className="text-slate-400 text-lg md:text-xl max-w-2xl mx-auto font-medium opacity-80">
+                    AI-powered recommendations tailored to your unique biology and lifestyle.
+                  </p>
+                </div>
 
-            switch (activeTab) {
-              case 'profile': return <UserProfile user={user} onLogout={handleLogout} />;
-              case 'strains': return <StrainLibrary userLocation={userLocation} user={user} />;
-              case 'dispensaries': return <DispensaryList dispensaries={dispensaries} userLocation={userLocation} />;
-              case 'contribute':
-                return (
-                  <div className="max-w-4xl mx-auto pt-10">
-                    <div className="flex justify-center mb-8">
-                      <div className="bg-slate-950/50 backdrop-blur-md border border-white/5 rounded-full p-1.5 flex gap-1 shadow-inner">
-                        {['strain', 'dispensary'].map(mode => (
-                          <button
-                            key={mode}
-                            onClick={() => setContributeMode(mode)}
-                            className={`px-8 py-2.5 rounded-full text-xs font-black uppercase tracking-widest transition-all ${contributeMode === mode
-                              ? 'bg-emerald-500 text-slate-950 shadow-lg'
-                              : 'text-slate-500 hover:text-white'
-                              }`}
-                          >
-                            Add {mode}
-                          </button>
+                <div className="relative group">
+                  <div className="absolute -inset-1 bg-gradient-to-r from-emerald-500/20 to-cyan-500/20 rounded-[3rem] blur-2xl opacity-50 group-hover:opacity-100 transition duration-1000" />
+                  <ConsultantInterface onRecommend={handleRecommendations} userLocation={userLocation} />
+                </div>
+
+                <AnimatePresence>
+                  {recommendations.length > 0 && (
+                    <motion.div
+                      id="recommendations"
+                      initial={{ opacity: 0, y: 100 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="mt-32"
+                    >
+                      <div className="flex items-center gap-6 mb-12">
+                        <h2 className="text-4xl font-black text-white tracking-tighter">Recommended</h2>
+                        <div className="h-[2px] flex-1 bg-gradient-to-r from-white/10 to-transparent" />
+                      </div>
+                      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+                        {recommendations.map((strain, index) => (
+                          <StrainCard
+                            key={strain.id}
+                            strain={strain}
+                            dispensaries={dispensaries}
+                            userLocation={userLocation}
+                          />
                         ))}
                       </div>
-                    </div>
-                    {contributeMode === 'strain' ? <SubmitStrainForm user={user} /> : <SubmitDispensaryForm user={user} />}
-                  </div>
-                );
-              case 'journal': return <JournalPage />;
-              case 'community': return <CommunityFeed />;
-              case 'admin': return <AdminDashboard />;
-              case 'privacy': return <PrivacyPolicy />;
-              case 'terms': return <TermsOfService />;
-              case 'consult':
-              default:
-                return (
-                  <div className="max-w-5xl mx-auto">
-                    <div className="text-center mb-20">
-                      <motion.div
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 mb-6"
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            } />
+            <Route path="/strains" element={<StrainLibrary userLocation={userLocation} user={user} />} />
+            <Route path="/strain/:slug" element={<StrainPage />} />
+            <Route path="/dispensaries" element={<DispensaryList dispensaries={dispensaries} userLocation={userLocation} />} />
+            <Route path="/profile" element={<UserProfile user={user} onLogout={handleLogout} />} />
+            <Route path="/journal" element={<JournalPage />} />
+            <Route path="/community" element={<CommunityFeed />} />
+            <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/privacy" element={<PrivacyPolicy />} />
+            <Route path="/terms" element={<TermsOfService />} />
+            <Route path="/contribute" element={
+              <div className="max-w-4xl mx-auto pt-10">
+                <div className="flex justify-center mb-8">
+                  <div className="bg-slate-950/50 backdrop-blur-md border border-white/5 rounded-full p-1.5 flex gap-1 shadow-inner">
+                    {['strain', 'dispensary'].map(mode => (
+                      <button
+                        key={mode}
+                        onClick={() => setContributeMode(mode)}
+                        className={`px-8 py-2.5 rounded-full text-xs font-black uppercase tracking-widest transition-all ${contributeMode === mode
+                          ? 'bg-emerald-500 text-slate-950 shadow-lg'
+                          : 'text-slate-500 hover:text-white'
+                          }`}
                       >
-                        <Sparkles className="w-3 h-3 text-emerald-400" />
-                        <span className="text-[10px] font-black text-emerald-400 uppercase tracking-widest">Next-Gen Intelligence</span>
-                      </motion.div>
-                      <h1 className="text-6xl md:text-8xl font-black text-white mb-6 leading-[0.9] tracking-tighter">
-                        Find Your <br />
-                        <span className="premium-gradient-text">Perfect Harmony.</span>
-                      </h1>
-                      <p className="text-slate-400 text-lg md:text-xl max-w-2xl mx-auto font-medium opacity-80">
-                        AI-powered recommendations tailored to your unique biology and lifestyle.
-                      </p>
-                    </div>
-
-                    <div className="relative group">
-                      <div className="absolute -inset-1 bg-gradient-to-r from-emerald-500/20 to-cyan-500/20 rounded-[3rem] blur-2xl opacity-50 group-hover:opacity-100 transition duration-1000" />
-                      <ConsultantInterface onRecommend={handleRecommendations} userLocation={userLocation} />
-                    </div>
-
-                    <AnimatePresence>
-                      {recommendations.length > 0 && (
-                        <motion.div
-                          id="recommendations"
-                          initial={{ opacity: 0, y: 100 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          className="mt-32"
-                        >
-                          <div className="flex items-center gap-6 mb-12">
-                            <h2 className="text-4xl font-black text-white tracking-tighter">Recommended</h2>
-                            <div className="h-[2px] flex-1 bg-gradient-to-r from-white/10 to-transparent" />
-                          </div>
-                          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-                            {recommendations.map((strain, index) => (
-                              <StrainCard
-                                key={strain.id}
-                                strain={strain}
-                                dispensaries={dispensaries}
-                                userLocation={userLocation}
-                              />
-                            ))}
-                          </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
+                        Add {mode}
+                      </button>
+                    ))}
                   </div>
-                );
-            }
-          })()}
+                </div>
+                {contributeMode === 'strain' ? <SubmitStrainForm user={user} /> : <SubmitDispensaryForm user={user} />}
+              </div>
+            } />
+          </Routes>
         </motion.div>
       </AnimatePresence>
     );

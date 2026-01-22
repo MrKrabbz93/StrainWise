@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { Helmet } from 'react-helmet-async';
 import { ArrowLeft, Share2, MapPin, Brain, Droplet, Star } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { getStrainImageUrl } from '../lib/images';
@@ -15,10 +16,12 @@ const StrainPage = () => {
     // Convert slug back to name (simple replacement for now)
     // In a real app, you'd store the 'slug' column in DB. 
     // For now, we try to match case-insensitive.
-    const strainName = slug.replace(/-/g, ' ');
+    const strainName = (slug || '').replace(/-/g, ' ');
 
     useEffect(() => {
         async function fetchStrain() {
+            if (!slug) return;
+            setLoading(true);
             const { data, error } = await supabase
                 .from('strains')
                 .select('*')
@@ -31,23 +34,29 @@ const StrainPage = () => {
             setLoading(false);
         }
         fetchStrain();
-    }, [strainName]);
+    }, [strainName, slug]);
 
     if (loading) {
         return (
             <div className="min-h-screen bg-slate-950 flex items-center justify-center text-slate-500">
-                Loading Connoisseur Data...
+                <div className="flex flex-col items-center gap-4">
+                    <div className="w-12 h-12 border-4 border-emerald-500/20 border-t-emerald-500 rounded-full animate-spin" />
+                    <p className="text-sm font-black uppercase tracking-widest animate-pulse">Analyzing Genetic Data...</p>
+                </div>
             </div>
         );
     }
 
     if (!strain) {
         return (
-            <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-slate-400">
-                <h1 className="text-3xl font-bold text-white mb-4">Strain Not Found</h1>
-                <p className="mb-8">This strain hasn't been archived yet.</p>
-                <Link to="/consult" className="px-6 py-2 bg-emerald-500 text-slate-950 rounded-full font-bold">
-                    Go Back
+            <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-slate-400 p-6 text-center">
+                <div className="w-20 h-20 bg-slate-900 rounded-full flex items-center justify-center mb-6 border border-white/5">
+                    <Search className="w-10 h-10 text-slate-700" />
+                </div>
+                <h1 className="text-3xl font-black text-white mb-4 tracking-tighter uppercase">Vault Entry Not Found</h1>
+                <p className="mb-8 text-slate-500 max-w-xs">This specific cultivar hasn't been archived in our global database yet.</p>
+                <Link to="/strains" className="px-8 py-3 bg-emerald-500 text-slate-950 rounded-full font-black uppercase tracking-widest shadow-lg shadow-emerald-500/20 hover:scale-105 transition-transform">
+                    Return to Archives
                 </Link>
             </div>
         );
@@ -57,8 +66,13 @@ const StrainPage = () => {
 
     return (
         <div className="min-h-screen bg-slate-950 text-slate-200 font-sans">
-            {/* Dynamic SEO Meta Strings (Simulated) */}
-            {/* <title>{strain.name} Review | Effects, Terpenes & Price - StrainWise</title> */}
+            <Helmet>
+                <title>{strain.name} | StrainWise AI Consultant</title>
+                <meta name="description" content={`Discover ${strain.name} - ${strain.type} strain. THC: ${strain.thc}. Effects: ${strain.effects?.join(', ')}. Full terpene profile and nearby availability on StrainWise.`} />
+                <meta property="og:title" content={`${strain.name} - Cannabis Strain Encyclopedia`} />
+                <meta property="og:description" content={strain.description} />
+                <meta property="og:image" content={imageSrc} />
+            </Helmet>
 
             <div className="relative w-full h-[50vh] md:h-[60vh]">
                 <img

@@ -21,7 +21,7 @@ const runWorker = async () => {
     while (true) {
         try {
             // 1. Poll for a new job using the RPC wrapper
-            const { data: job, error } = await supabase.rpc('pop_ai_job');
+            const { data: job, error } = await supabase.rpc('pop_ai_job', { queue_name: 'ai_job_queue' });
 
             if (error) {
                 console.error('AI Worker: Error polling queue:', error);
@@ -86,7 +86,10 @@ const runWorker = async () => {
             if (updateError) console.error("Failed to update result:", updateError);
 
             // Archive (ACK)
-            const { error: archiveError } = await supabase.rpc('archive_ai_job', { p_msg_id: msg_id });
+            const { error: archiveError } = await supabase.rpc('archive_ai_job', {
+                p_msg_id: msg_id,
+                queue_name: 'ai_job_queue'
+            });
             if (archiveError) console.error('Archive Error:', archiveError);
             else console.log(`[Job ${msg_id}] Processed and Archived.`);
 

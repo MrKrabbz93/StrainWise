@@ -9,8 +9,8 @@ const metricsService = {
 
 // Helper for Env
 const getEnv = (key) => {
-    try { if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env[key]) return import.meta.env[key]; } catch (e) { }
     try { if (typeof process !== 'undefined' && process.env && process.env[key]) return process.env[key]; } catch (e) { }
+    try { if (typeof import.meta !== 'undefined' && import.meta.env && import.meta.env[key]) return import.meta.env[key]; } catch (e) { }
     return undefined;
 };
 
@@ -77,7 +77,7 @@ export class HybridAIService {
 
         // OpenAI Setup
         const openAiKey = getEnv('OPENAI_API_KEY');
-        this.openai = openAiKey ? new OpenAI({ apiKey: openAiKey }) : null;
+        this.openai = openAiKey ? new OpenAI({ apiKey: openAiKey, dangerouslyAllowBrowser: true }) : null;
 
         // Zhipu Setup (GLM-4)
         this.zhipuKey = getEnv('VITE_ZHIPU_API_KEY') || getEnv('ZHIPU_API_KEY');
@@ -87,8 +87,10 @@ export class HybridAIService {
             dangerouslyAllowBrowser: true
         }) : null;
 
-        // Models
-        this.geminiFlash = this.genAI ? this.genAI.getGenerativeModel({ model: "gemini-3-flash-preview" }) : null;
+        // Models - Using 2.0 Flash for speed and intelligence
+        this.geminiFlash = this.genAI ? this.genAI.getGenerativeModel({
+            model: "gemini-2.0-flash-exp"
+        }) : null;
 
         // Resilience
         this.backendCircuit = new CircuitBreaker(3, 30000);
@@ -110,7 +112,6 @@ export class HybridAIService {
                     if (r && r.status === 'ready') {
                         redis = r;
                         const crypto = await import('crypto');
-                        const cleanPayload = { ...payload };
                         cacheKey = `ai_worker:${crypto.createHash('sha256').update(JSON.stringify(payload)).digest('hex')}`;
 
                         const cachedData = await redis.get(cacheKey);
@@ -124,7 +125,18 @@ export class HybridAIService {
                 } catch (e) { /* Redis optional */ }
             }
 
-            // 2. Try OpenAI (Priority if configured)
+            // 2. Browser Mode: Try Backend API first (Secure & Reliable)
+            if (!this.isNode) {
+                try {
+                    const result = await this.backendCircuit.call(() => this.callBackend(payload));
+                    success = true;
+                    return result;
+                } catch (e) {
+                    console.warn("Backend AI failed, falling back to local Gemini:", e.message);
+                }
+            }
+
+            // 3. Try OpenAI (Priority if configured & in Node)
             if (this.isNode && this.openai) {
                 provider = 'openai-node';
                 try {
@@ -138,30 +150,27 @@ export class HybridAIService {
                 }
             }
 
-            // 3. (Skipped Zhipu)
-
-
-            // 4. Try Gemini (Fallback)
-            if (this.isNode && this.geminiFlash) {
-                provider = 'gemini-node';
+            // 4. Try Gemini (Fallback - Works in both Node and Browser)
+            if (this.geminiFlash) {
+                provider = this.isNode ? 'gemini-node' : 'gemini-client';
                 try {
                     const prompt = payload.prompt || payload.messages?.map(m => m.content).join('\n');
-                    const result = await this.geminiFlash.generateContent(prompt);
+                    const systemPrompt = payload.systemPrompt || "";
+
+                    // Re-init with system instructions for this specific call
+                    const model = this.genAI.getGenerativeModel({
+                        model: "gemini-2.0-flash-exp",
+                        systemInstruction: systemPrompt
+                    });
+
+                    const result = await model.generateContent(prompt);
                     const text = result.response.text();
                     success = true;
-                    if (redis && cacheKey) await redis.setex(cacheKey, 3600, JSON.stringify(text));
+                    if (this.isNode && redis && cacheKey) await redis.setex(cacheKey, 3600, JSON.stringify(text));
                     return text;
                 } catch (e) {
-                    console.warn("Gemini failed:", e.message);
+                    console.warn("Local Gemini failed:", e.message);
                 }
-            }
-
-            // 5. Client-Side Fallback (Browser Mode)
-            if (this.geminiFlash) {
-                provider = 'gemini-client';
-                const result = await this.callClientGemini(payload);
-                success = true;
-                return result;
             }
 
             throw new Error("All AI services failed.");
@@ -172,32 +181,48 @@ export class HybridAIService {
         }
     }
 
-    async callOpenAI(payload) {
-        const prompt = payload.prompt || payload.messages?.map(m => m.content).join('\n');
-        const completion = await this.openai.chat.completions.create({
-            messages: [{ role: "user", content: prompt }],
-            model: "gpt-4o-mini", // Cost effective & smart
+    async callBackend(payload) {
+        const response = await fetch('/api/gemini', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                ...payload,
+                type: payload.type || 'chat'
+            })
         });
-        return completion.choices[0].message.content;
+
+        if (!response.ok) {
+            const err = await response.json();
+            console.error("AI Backend Error:", err);
+            throw new Error(err.details || err.error || 'Backend failure');
+        }
+
+        return await response.json();
     }
 
-    async callZhipu(payload) {
+    async callOpenAI(payload) {
         const prompt = payload.prompt || payload.messages?.map(m => m.content).join('\n');
-        const systemPrompt = payload.systemPrompt ? { role: "system", content: payload.systemPrompt } : null;
+        const systemMessage = payload.systemPrompt ? { role: "system", content: payload.systemPrompt } : null;
+        const messages = systemMessage ? [systemMessage, { role: "user", content: prompt }] : [{ role: "user", content: prompt }];
 
-        const messages = systemPrompt ? [systemPrompt, { role: "user", content: prompt }] : [{ role: "user", content: prompt }];
-
-        const completion = await this.zhipu.chat.completions.create({
+        const completion = await this.openai.chat.completions.create({
             messages: messages,
-            model: "glm-4-air",
+            model: "gpt-4o-mini",
         });
         return completion.choices[0].message.content;
     }
 
     async callClientGemini(payload) {
-        // Simplified fallback for browser
-        const prompt = payload.prompt || payload.messages?.map(m => m.content).join('\n');
-        const result = await this.geminiFlash.generateContent(prompt);
+        const userPrompt = payload.prompt || payload.messages?.map(m => m.content).join('\n');
+        const systemPrompt = payload.systemPrompt || "";
+
+        // Correctly pass system instructions to Gemini
+        const model = this.genAI.getGenerativeModel({
+            model: "gemini-2.0-flash-exp",
+            systemInstruction: systemPrompt
+        });
+
+        const result = await model.generateContent(userPrompt);
         return result.response.text();
     }
 

@@ -4,6 +4,21 @@ WORKDIR /app
 
 # Copy package files
 COPY package.json ./
+
+# Copy prisma folder needed for postinstall: prisma generate
+COPY prisma ./prisma
+
+# Install build dependencies for native modules (canvas)
+RUN apk add --no-cache \
+    build-base \
+    g++ \
+    cairo-dev \
+    pango-dev \
+    libjpeg-turbo-dev \
+    giflib-dev \
+    librsvg-dev \
+    python3
+
 # Note: specific lock file usage is skipped to allow picking up manual package.json edits
 RUN npm install --legacy-peer-deps
 
@@ -24,6 +39,14 @@ RUN npm run build
 FROM node:22-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
+
+# Install runtime dependencies for canvas
+RUN apk add --no-cache \
+    cairo \
+    pango \
+    libjpeg-turbo \
+    giflib \
+    librsvg
 
 # Copy build artifacts and dependencies
 COPY --from=builder /app/dist ./dist
