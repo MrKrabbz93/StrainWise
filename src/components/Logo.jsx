@@ -12,67 +12,53 @@ export const Logo = ({ className = "w-12 h-12", withText = true }) => {
                     viewBox="0 0 100 100"
                     fill="none"
                     xmlns="http://www.w3.org/2000/svg"
-                    className="w-full h-full relative z-10 drop-shadow-[0_20px_20px_rgba(0,0,0,0.6)]"
+                    className="w-full h-full relative z-10 drop-shadow-[0_10px_10px_rgba(0,0,0,0.5)]"
                 >
                     <defs>
-                        <linearGradient id="premium-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <linearGradient id="sw-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
                             <stop offset="0%" stopColor="#10b981" />
-                            <stop offset="50%" stopColor="#059669" />
-                            <stop offset="100%" stopColor="#064e3b" />
+                            <stop offset="100%" stopColor="#059669" />
                         </linearGradient>
-                        <linearGradient id="crystal-shine" x1="0%" y1="0%" x2="100%" y2="100%">
-                            <stop offset="0%" stopColor="rgba(255,255,255,0.4)" />
-                            <stop offset="50%" stopColor="rgba(255,255,255,0.1)" />
-                            <stop offset="100%" stopColor="rgba(255,255,255,0.0)" />
-                        </linearGradient>
+                        <filter id="sw-glow">
+                            <feGaussianBlur stdDeviation="2" result="glow" />
+                            <feComposite in="SourceGraphic" in2="glow" operator="over" />
+                        </filter>
                     </defs>
 
-                    {/* Architectural Leaf Base (7 Points) */}
+                    {/* Premium Octagon Shield */}
+                    <path
+                        d="M30 10 H70 L90 30 V70 L70 90 H30 L10 70 V30 Z"
+                        fill="#0f172a"
+                        stroke="url(#sw-gradient)"
+                        strokeWidth="1.5"
+                    />
+
+                    {/* The "SW" Monogram - World Class Architectural Lineup */}
                     <motion.path
-                        initial={{ opacity: 0, scale: 0.8 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        transition={{ duration: 1.2 }}
-                        d="M50 10 L58 35 L85 35 L62 50 L75 75 L50 60 L25 75 L38 50 L15 35 L42 35 Z"
-                        fill="url(#premium-gradient)"
-                        className="filter drop-shadow-2xl"
+                        initial={{ pathLength: 0, opacity: 0 }}
+                        animate={{ pathLength: 1, opacity: 1 }}
+                        transition={{ duration: 1.5, ease: "easeInOut" }}
+                        d="M25 35 C25 25, 45 25, 45 35 C45 45, 25 45, 25 55 C25 65, 45 65, 45 55"
+                        stroke="url(#sw-gradient)"
+                        strokeWidth="8"
+                        strokeLinecap="round"
+                        fill="none"
+                    />
+                    <motion.path
+                        initial={{ pathLength: 0, opacity: 0 }}
+                        animate={{ pathLength: 1, opacity: 1 }}
+                        transition={{ duration: 1.5, ease: "easeInOut", delay: 0.2 }}
+                        d="M55 35 V65 L75 35 V65"
+                        stroke="white"
+                        strokeWidth="8"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        fill="none"
+                        style={{ opacity: 0.9 }}
                     />
 
-                    {/* Inner Facets for 'Crystal' look */}
-                    <path
-                        d="M50 10 L50 60 L75 75 Z"
-                        fill="rgba(0,0,0,0.2)"
-                    />
-                    <path
-                        d="M50 10 L50 60 L25 75 Z"
-                        fill="rgba(255,255,255,0.1)"
-                    />
-
-                    {/* The Intelligence Core (Center) */}
-                    <motion.circle
-                        cx="50"
-                        cy="45"
-                        r="8"
-                        fill="#020617"
-                        stroke="#10b981"
-                        strokeWidth="1"
-                        initial={{ r: 0 }}
-                        animate={{ r: 8 }}
-                        transition={{ delay: 0.5, duration: 0.8, type: "spring" }}
-                    />
-                    <motion.circle
-                        cx="50"
-                        cy="45"
-                        r="3"
-                        fill="#10b981"
-                        animate={{ scale: [1, 1.5, 1], opacity: [0.5, 1, 0.5] }}
-                        transition={{ repeat: Infinity, duration: 2 }}
-                    />
-
-                    {/* Shine Layer */}
-                    <path
-                        d="M50 10 L58 35 L42 35 Z"
-                        fill="url(#crystal-shine)"
-                    />
+                    {/* Tech Accents */}
+                    <circle cx="80" cy="20" r="3" fill="#10b981" className="animate-pulse" />
                 </svg>
             </div>
 
