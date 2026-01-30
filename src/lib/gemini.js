@@ -35,7 +35,7 @@ export const identifyStrain = async (base64Image) => {
     return await aiService.identifyStrain(base64Image);
 };
 
-export const generateResponse = async (history, userMessage, persona = "helpful", location = null) => {
+export const generateResponse = async (history, userMessage, persona = "helpful", location = null, inventoryContext = null) => {
     let systemPrompt = getPersonaPrompt(persona);
 
     // Dynamic Context Injection
@@ -76,6 +76,14 @@ export const generateResponse = async (history, userMessage, persona = "helpful"
         If they ask about "nearby" or "local" availability, acknowledge their location context.`;
     }
 
+    if (inventoryContext) {
+        systemPrompt += `\n\nLIVE INVENTORY CONTEXT:\n${inventoryContext}\n
+        CRITICAL: Use the above live data to make real-time recommendations. 
+        If a user asks for a strain that is listed in the "LIVE LOCAL STOCK FEED", tell them exactly which shop has it and how far away it is.
+        If they are looking for a recommendation, prioritize strains that are currently in stock nearby. 
+        Frame this as a "Live Concierge Service".`;
+    }
+
     const response = await aiService.generateResponse({
         type: 'chat',
         prompt: userMessage,
@@ -103,6 +111,40 @@ export const generateResponse = async (history, userMessage, persona = "helpful"
         return `⚠️ API Failure Details: ${response}\n\nAsk the developer to check the specific error above.`;
     }
     return response;
+};
+
+/**
+ * THE ANNEALING LOOP (Quality Control)
+ * Generates a response, critiques it against the persona/constraints, and refines it.
+ */
+export const generateAnnealedResponse = async ({ prompt, persona = "helpful", maxChars = 280, industry = "cannabis" }) => {
+    const personaPrompt = getPersonaPrompt(persona);
+
+    // 1. Initial Draft
+    const draftPrompt = `${personaPrompt}\n\nTask: ${prompt}\nConstraint: Max ${maxChars} characters.\n\nOutput only the response text.`;
+    let response = await callGemini({ type: 'generate', prompt: draftPrompt });
+
+    if (!response || response.startsWith("Error:")) return response;
+
+    // 2. The Annealing (Self-Critique)
+    const critiquePrompt = `Act as a Brand Manager for StrainWise. 
+    Review this draft for a ${persona} persona: "${response}"
+    
+    Criteria:
+    1. Is it under ${maxChars} characters? (Current: ${response.length})
+    2. Does it sound like high-end ${industry} consulting?
+    3. Is it engaging without being spammy?
+    
+    If it fails ANY criteria, provide a refined version. If it's perfect, return the original. 
+    Output ONLY the final text.`;
+
+    const annealed = await callGemini({ type: 'generate', prompt: critiquePrompt });
+
+    if (annealed && !annealed.startsWith("Error:")) {
+        return annealed.trim();
+    }
+
+    return response.trim();
 };
 
 export const generateSalesCopy = async (strainName, userNeeds) => {

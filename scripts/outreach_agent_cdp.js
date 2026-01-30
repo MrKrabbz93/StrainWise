@@ -221,19 +221,35 @@ class OutreachAgentChrome {
         return comment.replace(/"/g, '');
     }
 
-    async callGeminiWithRetry(payload, retries = 3) {
+    async callGeminiWithRetry(payload, retries = 5) {
         for (let i = 0; i < retries; i++) {
             try {
-                return await callGemini(payload);
+                const response = await callGemini(payload);
+                if (!response || response.includes("Error:")) {
+                    throw new Error(response || "Empty response");
+                }
+                return response;
             } catch (e) {
-                if (e.status === 429) {
-                    await new Promise(r => setTimeout(r, 2000 * (i + 1)));
+                const isRateLimit = e.status === 429 || (e.message && e.message.includes("429"));
+                if (isRateLimit) {
+                    const waitTime = Math.pow(2, i) * 5000 + (Math.random() * 2000);
+                    console.log(`⚠️ Rate limited (429). Retrying in ${Math.round(waitTime / 1000)}s... (Attempt ${i + 1}/${retries})`);
+                    await new Promise(r => setTimeout(r, waitTime));
                     continue;
                 }
-                return "Error generating content: " + e.message;
+                console.warn(`⚠️ AI Generation Warning (Attempt ${i + 1}): ${e.message}`);
+                await new Promise(r => setTimeout(r, 2000));
             }
         }
-        return "Error generating content.";
+
+        // Final fallback if all retries fail
+        const fallbacks = [
+            "That's a great point about the community! Always love seeing this kind of insight. #cannabiscommunity",
+            "Incredible perspective! Thanks for sharing this with the community. 🌿",
+            "Spot on! It's all about sharing knowledge and growing together. #strainwise",
+            "This is exactly what makes the cannabis community so vibrant. Thanks for the post!"
+        ];
+        return fallbacks[Math.floor(Math.random() * fallbacks.length)];
     }
 
     // --- DATA HELPERS ---

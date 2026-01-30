@@ -163,16 +163,18 @@ const StrainPage = () => {
                             <p className="text-sm text-slate-400 mb-6">
                                 Join our network to view live inventory at verified dispensaries near you.
                             </p>
-                            <div className="relative group/disabled-btn">
+                            <div className="relative group">
                                 <button
-                                    disabled
-                                    className="w-full py-4 bg-slate-800 text-slate-500 font-bold rounded-xl cursor-not-allowed flex items-center justify-center gap-2 opacity-70"
+                                    onClick={() => {
+                                        // Implementation for locating stock
+                                        // Since we now have geocoding and harvesting running,
+                                        // we can link this to the map or a dedicated inventory view.
+                                        navigate(`/strains?search=${strain.name}&mode=map`);
+                                    }}
+                                    className="w-full py-4 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black rounded-xl shadow-lg shadow-emerald-500/20 transition-all flex items-center justify-center gap-2 group-hover:scale-105"
                                 >
                                     <MapPin className="w-5 h-5" /> Locate Stock
                                 </button>
-                                <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-amber-500/90 text-slate-900 text-xs font-bold px-2 py-1 rounded shadow-sm pointer-events-none">
-                                    Coming Soon
-                                </div>
                             </div>
                             <p className="text-xs text-center text-slate-600 mt-4">Verified Members Only</p>
                         </div>

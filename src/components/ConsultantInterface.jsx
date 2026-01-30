@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { MessageSquare, ArrowRight, Loader2, Sparkles, Bot, User, Camera, Brain, FlaskConical } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { generateResponse, isAIEnabled, identifyStrain } from '../lib/gemini';
+import { getNearbyInventoryContext } from '../lib/services/dispensary.service';
 import { motion, AnimatePresence } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 import { getPersonalizedScores } from '../lib/services/recommendation.service';
@@ -141,8 +142,14 @@ const ConsultantInterface = ({ onRecommend, userLocation, externalInput, onInput
     setIsLoading(true);
 
     try {
-      // Pass the CURRENT persona state
-      const responseText = await generateResponse(messages, input, persona, userLocation);
+      // Phase IV: Fetch Live Inventory Context if location is available
+      let inventoryContext = null;
+      if (userLocation) {
+        inventoryContext = await getNearbyInventoryContext(userLocation.lat, userLocation.lng);
+      }
+
+      // Pass the CURRENT persona state and inventory context
+      const responseText = await generateResponse(messages, input, persona, userLocation, inventoryContext);
       setMessages(prev => [...prev, { role: 'assistant', content: responseText }]);
       if (onResponse) onResponse(responseText);
 
@@ -267,10 +274,8 @@ const ConsultantInterface = ({ onRecommend, userLocation, externalInput, onInput
       <div className="mb-6 relative z-20">
         <div className="flex justify-between items-center mb-6">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-400 to-cyan-500 p-[1px] shadow-lg shadow-emerald-500/20">
-              <div className="w-full h-full bg-slate-950 rounded-[15px] flex items-center justify-center">
-                <Brain className="w-6 h-6 text-emerald-400" />
-              </div>
+            <div className="w-14 h-14 flex items-center justify-center">
+              <img src="/logo-icon-card.png" alt="StrainWise" className="w-full h-full object-contain scale-110" />
             </div>
             <div>
               <h3 className="text-xl font-black text-white leading-none tracking-tight">AI Consultant</h3>

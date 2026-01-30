@@ -148,8 +148,18 @@ async function generateStrategy(data) {
         return JSON.parse(result.replace(/```json/g, '').replace(/```/g, '').trim());
     }
     // Fallback to Gemini via callGemini
-    const result = await callGemini({ type: 'generate', prompt });
-    return JSON.parse(result.replace(/```json/g, '').replace(/```/g, '').trim());
+    try {
+        const result = await callGemini({ type: 'generate', prompt });
+        if (!result || result.includes("Error:")) throw new Error(result || "Empty response");
+        return JSON.parse(result.replace(/```json/g, '').replace(/```/g, '').trim());
+    } catch (e) {
+        console.warn(`⚠️ Marketing Agent Generation Failure: ${e.message}. Using baseline strategy.`);
+        return {
+            "twitter": ["Discover the future of cannabis with StrainWise. 🌿", "Personalized insights, elite knowledge. #strainwise"],
+            "instagram": { "caption": "Elevate your experience with StrainWise.", "image_prompt": "premium cannabis aesthetic" },
+            "tiktok": { "script": "Fast cut of premium strains... text: StrainWise is here." }
+        };
+    }
 }
 
 // Helper for robust JSON extraction

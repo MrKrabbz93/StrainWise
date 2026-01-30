@@ -47,12 +47,13 @@ export async function getNearbyDispensaries(lat: number, lng: number, radiusMile
     }
 
     // Calculate distance and filter
-    const dispensariesWithDist = data.map((d: Dispensary) => {
+    const dispensariesWithDist = data.map((d: any) => {
+        if (!d.latitude || !d.longitude) return { ...d, distance: 999999 };
         const dist = haversineDistance(lat, lng, d.latitude, d.longitude);
         return { ...d, distance: dist };
-    }).filter((d: Dispensary) => d.distance! <= radiusMiles);
+    }).filter((d: any) => d.distance <= radiusMiles);
 
-    return dispensariesWithDist.sort((a: Dispensary, b: Dispensary) => (a.distance || 0) - (b.distance || 0));
+    return dispensariesWithDist.sort((a: any, b: any) => (a.distance || 0) - (b.distance || 0));
 }
 
 /**
@@ -100,17 +101,45 @@ export async function getDispensariesWithStrain(strainId: string, lat: number, l
 
     // 3. Merge and Sort by distance
     let results = dispensaries.map((d: any) => {
-        const dist = haversineDistance(lat, lng, d.latitude, d.longitude);
+        const hasCoords = d.latitude && d.longitude;
+        const dist = hasCoords ? haversineDistance(lat, lng, d.latitude, d.longitude) : 999999;
         const inv = inventoryMap.get(d.id);
-        return { ...d, ...inv, distance: dist }; // Merge inventory info (prices) with dispensary info
+        return { ...d, ...inv, distance: dist };
     });
 
-    // 4. Filter by radius and sort
+    // 4. Filter by radius (if coords exist) and sort
     results = results
         .filter((d: any) => d.distance <= radiusMiles)
         .sort((a: any, b: any) => a.distance - b.distance);
 
     return results;
+}
+
+/**
+ * Summarize nearby stock for the AI Consultant.
+ * Returns a compact string of what is available nearby.
+ */
+export async function getNearbyInventoryContext(lat: number, lng: number, radiusMiles: number = 25): Promise<string> {
+    const nearby = await getNearbyDispensaries(lat, lng, radiusMiles);
+    if (nearby.length === 0) return "No dispensaries found in the immediate vicinity.";
+
+    const contextParts = [];
+
+    // Pick top 3 closest dispensaries and fetch their top 5 items
+    for (const disp of nearby.slice(0, 3)) {
+        const inventory = await getDispensaryInventory(disp.id);
+        const stockSummary = inventory.slice(0, 5).map(i => i.strain_id).join(", ");
+
+        if (stockSummary) {
+            contextParts.push(`- ${disp.name} (${disp.distance?.toFixed(1)}mi): Currently stocking ${stockSummary}.`);
+        } else {
+            contextParts.push(`- ${disp.name} (${disp.distance?.toFixed(1)}mi): No live menu data yet.`);
+        }
+    }
+
+    return contextParts.length > 0
+        ? "LIVE LOCAL STOCK FEED:\n" + contextParts.join("\n")
+        : "No live inventory data available for nearby shops.";
 }
 
 // --- Helpers ---

@@ -11,4 +11,18 @@ services:
     environment:
       - PORT=4173
       - NODE_ENV=production
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
+    restart: unless-stopped
+
+  outreach-agent:
+    container_name: strainwise_outreach
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.outreach
+    env_file:
+      - .env
+    volumes:
+      - ./marketing:/app/marketing
     restart: unless-stopped

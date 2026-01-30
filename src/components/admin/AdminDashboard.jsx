@@ -4,6 +4,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { Users, Book, Heart, Zap, Shield, AlertTriangle, CheckCircle, Search, Sparkles, LayoutDashboard } from 'lucide-react';
 import { supabase } from '../../lib/supabase';
 import MarketingStudio from './MarketingStudio';
+import LogisticsDashboard from './LogisticsDashboard';
 
 const AdminDashboard = () => {
     const [activeTab, setActiveTab] = useState('analytics');
@@ -102,9 +103,14 @@ const AdminDashboard = () => {
         <div className="space-y-8 pb-20">
             <div className="flex justify-between items-center">
                 <div className="flex items-center gap-6">
-                    <div>
-                        <h2 className="text-3xl font-black text-white tracking-tight">MYCELIUM <span className="text-emerald-500">HQ</span></h2>
-                        <p className="text-slate-500 text-sm">Centralized Network Management.</p>
+                    <div className="flex items-center gap-4">
+                        <div className="w-16 h-16 flex items-center justify-center">
+                            <img src="/logo-icon-body.png" alt="StrainWise" className="w-full h-full object-contain scale-110" />
+                        </div>
+                        <div>
+                            <h2 className="text-3xl font-black text-white tracking-tight">MYCELIUM <span className="text-emerald-500">HQ</span></h2>
+                            <p className="text-slate-500 text-sm">Centralized Network Management.</p>
+                        </div>
                     </div>
                 </div>
 
@@ -122,6 +128,13 @@ const AdminDashboard = () => {
                             }`}
                     >
                         <Sparkles className="w-4 h-4" /> Marketing
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('logistics')}
+                        className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === 'logistics' ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20' : 'text-slate-500 hover:text-white'
+                            }`}
+                    >
+                        <Zap className="w-4 h-4" /> Logistics
                     </button>
                 </div>
             </div>
@@ -248,8 +261,10 @@ const AdminDashboard = () => {
                         </div>
                     </div>
                 </div>
-            ) : (
+            ) : activeTab === 'marketing' ? (
                 <MarketingStudio />
+            ) : (
+                <LogisticsDashboard />
             )}
         </div>
     );

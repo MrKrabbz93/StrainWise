@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { createClient } from '@supabase/supabase-js';
 
 // Setup paths for ES modules
 const __filename = fileURLToPath(import.meta.url);
@@ -46,6 +47,28 @@ class OutreachAgent {
         this.lastPostTime = 0;
         this.isRunning = false;
         this.keywords = ["#cannabiscommunity", "terpenes", "#strainwise", "#cannabisculture"];
+        this.logFile = path.join(ROOT_DIR, 'marketing', 'agent_runtime.log');
+
+        // Supabase Client
+        const supabaseUrl = process.env.VITE_SUPABASE_URL;
+        const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+        if (supabaseUrl && supabaseKey) {
+            this.supabase = createClient(supabaseUrl, supabaseKey);
+            this.log("Connected to Supabase for Lead Sync.");
+        } else {
+            this.log("⚠️ Supabase credentials missing. Lead sync disabled.", "WARN");
+        }
+    }
+
+    log(message, type = 'INFO') {
+        const timestamp = new Date().toISOString();
+        const logEntry = `[${timestamp}] [${type}] ${message}\n`;
+        console.log(logEntry.trim());
+        try {
+            fs.appendFileSync(this.logFile, logEntry);
+        } catch (e) {
+            console.error("Failed to write to log file:", e.message);
+        }
     }
 
     randomSleep(min, max) {
@@ -54,12 +77,15 @@ class OutreachAgent {
 
     async connect() {
         if (args.headless) {
-            console.log("🔌 Launching New Browser (Headless Mode)...");
-            this.browser = await chromium.launch({ headless: true });
+            this.log("🔌 Launching New Browser (Headless Mode)...");
+            this.browser = await chromium.launch({
+                headless: true,
+                args: ['--no-sandbox', '--disable-setuid-sandbox']
+            });
             const context = await this.browser.newContext();
             this.page = await context.newPage();
         } else {
-            console.log(`🔌 Connecting to Existing Chrome on port ${this.debugPort}...`);
+            this.log(`🔌 Connecting to Existing Chrome on port ${this.debugPort}...`);
             const endpoints = [`http://127.0.0.1:${this.debugPort}`, `http://localhost:${this.debugPort}`];
 
             for (const endpoint of endpoints) {
@@ -79,22 +105,22 @@ class OutreachAgent {
     }
 
     async navigateToHome() {
-        console.log("🏠 Navigating to Home...");
+        this.log("🏠 Navigating to Home...");
         try {
             await this.page.goto('https://x.com/home', { waitUntil: 'domcontentloaded', timeout: 60000 });
             await this.randomSleep(5000, 10000);
 
             const url = this.page.url();
             if (url.includes('login')) {
-                console.error("⚠️ Not logged in. Please log in manually (if valid session).");
+                this.log("⚠️ Not logged in. Please log in manually (if valid session).", "WARN");
                 if (!this.autoApprove) await this.page.waitForURL('**/home', { timeout: 0 });
             }
             if (url.includes('account/access') || url.includes('suspended')) {
-                console.error("🚨 ACCOUNT SUSPENDED OR LOCKED. Terminating Agent.");
+                this.log("🚨 ACCOUNT SUSPENDED OR LOCKED. Terminating Agent.", "ERROR");
                 process.exit(1);
             }
         } catch (e) {
-            console.warn("Home navigation warning:", e.message);
+            this.log(`Home navigation warning: ${e.message}`, "WARN");
         }
     }
 
@@ -123,9 +149,9 @@ class OutreachAgent {
     async runContinuous() {
         if (!await this.connect()) return;
 
-        console.log(`🚀 Starting continuous outreach`);
-        console.log(`   📅 Schedule: 9:00, 13:00, 17:00, 21:00`);
-        console.log(`   ⏱️  Min Interval: ${POSTING_INTERVAL_HOURS} hours`);
+        this.log(`🚀 Starting continuous outreach`);
+        this.log(`   📅 Schedule: 9:00, 13:00, 17:00, 21:00`);
+        this.log(`   ⏱️  Min Interval: ${POSTING_INTERVAL_HOURS} hours`);
         this.isRunning = true;
 
         await this.navigateToHome();
@@ -135,13 +161,13 @@ class OutreachAgent {
             try {
                 const strategy = JSON.parse(fs.readFileSync(args.input, 'utf8'));
                 if (strategy.twitter) this.keywords = ["#cannabis", ...this.keywords];
-            } catch (e) { console.warn("⚠️ Strategy parse error"); }
+            } catch (e) { this.log("⚠️ Strategy parse error", "WARN"); }
         }
 
         while (this.isRunning) {
             try {
                 if (this.shouldPost()) {
-                    console.log('⏰ Time to post - finding target...');
+                    this.log('⏰ Time to post - finding target...');
 
                     // Shuffle keywords to vary topics
                     const shuffledKeywords = this.keywords.sort(() => 0.5 - Math.random());
@@ -152,26 +178,26 @@ class OutreachAgent {
                     if (engaged) {
                         this.lastPostTime = Date.now();
                         const nextPostDate = new Date(this.lastPostTime + POSTING_INTERVAL_MS);
-                        console.log(`✅ Cycle Complete. Next post at: ${nextPostDate.toLocaleTimeString()}`);
+                        this.log(`✅ Cycle Complete. Next post at: ${nextPostDate.toLocaleTimeString()}`);
                     } else {
-                        console.log("⚠️ No viable targets found this cycle. Retrying in 15 mins.");
+                        this.log("⚠️ No viable targets found this cycle. Retrying in 15 mins.", "WARN");
                     }
                 } else {
                     const minsRemaining = Math.ceil((POSTING_INTERVAL_MS - (Date.now() - this.lastPostTime)) / 60000);
-                    console.log(`💤 Sleeping... ${minsRemaining} mins until next window.`);
+                    if (new Date().getMinutes() % 15 === 0) {
+                        this.log(`💤 Sleeping... ${minsRemaining} mins until next window.`);
+                    }
                 }
 
                 // Heartbeat check every 15 minutes
                 await new Promise(resolve => setTimeout(resolve, 15 * 60 * 1000));
 
-                // Refresh page periodically to keep session alive? Or reconnect?
-                // For now, assume connection stays valid or navigateToHome handles it.
                 if (this.isRunning && this.page) {
                     try { await this.navigateToHome(); } catch (e) { }
                 }
 
             } catch (error) {
-                console.error('Error in continuous mode:', error);
+                this.log(`Error in continuous mode: ${error.message}`, "ERROR");
                 // Wait 1 hour before retrying after error
                 await new Promise(resolve => setTimeout(resolve, 60 * 60 * 1000));
             }
@@ -237,16 +263,16 @@ class OutreachAgent {
 
     async postComment(tweet, comment, personaName) {
         if (this.autoApprove) {
-            console.log(`🚀 [AUTO] Posting: "${comment}"`);
+            this.log(`🚀 [AUTO] Posting: "${comment}"`);
             await this.executePost(tweet, comment);
-            this.logEngagement(tweet, comment, personaName);
+            await this.logEngagement(tweet, comment, personaName);
         } else {
             return new Promise((resolve) => {
                 this.rl.question(`\n🚀 Post? (y/n): "${comment}" `, async (ans) => {
                     if (ans.toLowerCase() === 'y') {
                         await this.executePost(tweet, comment);
                     }
-                    this.logEngagement(tweet, comment, personaName);
+                    await this.logEngagement(tweet, comment, personaName);
                     resolve();
                 });
             });
@@ -279,16 +305,42 @@ class OutreachAgent {
 
     // --- AI HELPERS ---
     async decidePersona(post) {
-        // Simplified fallback if Gemini fails or is rate limited
-        return { name: "guide" };
-        // Note: Full logic was in previous version, can restore if needed but keeping it simple for stability in snippet
+        try {
+            const response = await callGemini({
+                type: 'generate',
+                prompt: `Analyze this content and pick the best persona from ["scientist", "connoisseur", "helpful"].
+                Content: "${post.content}"
+                Return ONLY the name of the persona.`
+            });
+            const name = response.trim().toLowerCase();
+            return { name: ["scientist", "connoisseur", "helpful"].includes(name) ? name : "helpful" };
+        } catch (e) {
+            return { name: "helpful" };
+        }
     }
 
     async draftAndAnneal(post, persona) {
         try {
-            return await callGemini({ type: 'generate', prompt: `Reply as specific Persona to: "${post.content}". Max 150 chars. Helpful, cool.` });
-        } catch {
-            return "That's super interesting! Thanks for sharing #cannabiscommunity";
+            const { generateAnnealedResponse } = await import('../src/lib/gemini.js');
+            const response = await generateAnnealedResponse({
+                prompt: `Reply to this: "${post.content}"`,
+                persona: persona.name,
+                maxChars: 240
+            });
+
+            if (!response || response.includes("Error:")) {
+                throw new Error("AI Generation Failed");
+            }
+            return response;
+        } catch (e) {
+            this.log(`⚠️ Outreach Agent AI Failure: ${e.message}. Using fallback.`, "WARN");
+            const fallbacks = [
+                "That's super interesting! Thanks for sharing #cannabiscommunity",
+                "Great point! The community needs more of this kind of insight. 🌿",
+                "Totally agree! Thanks for the post. #strainwise",
+                "Love the energy here! Thanks for sharing with everyone."
+            ];
+            return fallbacks[Math.floor(Math.random() * fallbacks.length)];
         }
     }
 
@@ -297,10 +349,35 @@ class OutreachAgent {
         try { return JSON.parse(fs.readFileSync(HISTORY_FILE, 'utf8')).some(h => h.id === id); } catch { return false; }
     }
 
-    logEngagement(post, comment, persona) {
+    async logEngagement(post, comment, persona) {
+        // 1. Local Log
         const history = fs.existsSync(HISTORY_FILE) ? JSON.parse(fs.readFileSync(HISTORY_FILE, 'utf8')) : [];
-        history.push({ id: post.id, handle: post.handle, content: post.content, reply: comment, persona, timestamp: new Date().toISOString() });
+        const entry = { id: post.id, handle: post.handle, content: post.content, reply: comment, persona, timestamp: new Date().toISOString() };
+        history.push(entry);
         fs.writeFileSync(HISTORY_FILE, JSON.stringify(history, null, 2));
+
+        // 2. Supabase Sync (The Arteries)
+        if (this.supabase) {
+            try {
+                this.log(`📡 Syncing lead to Supabase: @${post.handle}`);
+                const { error } = await this.supabase
+                    .from('dispensaries')
+                    .upsert({
+                        name: `@${post.handle} (Lead)`,
+                        twitter_handle: post.handle,
+                        outreach_status: 'engaged',
+                        last_contacted_at: new Date().toISOString(),
+                        lead_notes: `Initial engagement via X: "${comment.substring(0, 100)}..."`,
+                        address: 'Remote/X',
+                        city: 'Global'
+                    }, { onConflict: 'twitter_handle' });
+
+                if (error) throw error;
+                this.log(`✅ Lead synced for @${post.handle}`);
+            } catch (e) {
+                this.log(`❌ Supabase Sync Failed: ${e.message}`, "ERROR");
+            }
+        }
     }
 
     async disconnect() {

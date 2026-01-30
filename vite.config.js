@@ -1,6 +1,11 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
+import path from 'path'
+import { fileURLToPath } from 'url'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -11,7 +16,7 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      'react-is': 'react-is'
+      'react-is': path.resolve(__dirname, 'node_modules/react-is')
     }
   },
   plugins: [
@@ -51,6 +56,7 @@ export default defineConfig({
   ],
   build: {
     rollupOptions: {
+      // Externalize problematic modules that should not be bundled for the browser
       external: ['canvas']
     }
   }
