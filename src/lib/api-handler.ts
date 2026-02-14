@@ -1,7 +1,7 @@
-import { handleApiError } from './error-handler';
-import { logger } from './logger';
-import { jwtService, rateLimiter } from './security';
-import { UnauthorizedError, ForbiddenError } from './error-handler';
+import { handleApiError } from './error-handler.js';
+import { logger } from './logger.js';
+import { jwtService, rateLimiter } from './security.js';
+import { UnauthorizedError, ForbiddenError } from './error-handler.js';
 import { z } from 'zod';
 
 export function createApiHandler(handler, middlewares = []) {
@@ -48,7 +48,7 @@ export const withRateLimit = (limit = 100, window = 60) => async (req, res) => {
     }
 };
 
-import { supabase } from './supabase';
+import { supabase } from './supabase.js';
 
 export const withAuth = async (req, res) => {
     const authHeader = req.headers.authorization;
@@ -78,7 +78,7 @@ export const withValidation = (schema) => async (req, res) => {
     } catch (error) {
         if (error instanceof z.ZodError) {
             // Wrap Zod error
-            const msg = error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ');
+            const msg = error.issues.map(e => `${e.path.join('.')}: ${e.message}`).join(', ');
             // Throw validation error-like object or specific class
             // For now rethrow as custom object for error handler to pick up?
             // Or update error-handler to handle ZodError. 

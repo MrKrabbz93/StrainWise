@@ -8,30 +8,35 @@ const LOG_LEVELS = {
 const currentLevel = process.env.LOG_LEVEL || 'info';
 
 class Logger {
+    private level: number;
+
     constructor() {
-        this.level = LOG_LEVELS[currentLevel] || LOG_LEVELS.info;
+        this.level = LOG_LEVELS[currentLevel as keyof typeof LOG_LEVELS] || LOG_LEVELS.info;
     }
 
-    log(level, message, meta = {}) {
-        if (LOG_LEVELS[level] <= this.level) {
+    log(level: string, message: string, meta: any = {}) {
+        if (LOG_LEVELS[level as keyof typeof LOG_LEVELS] <= this.level) {
             const timestamp = new Date().toISOString();
             console.log(JSON.stringify({ timestamp, level, message, ...meta }));
         }
     }
 
-    error(message, meta = {}) {
+    constructor(message: string, statusCode: number = 500, code: string = 'INTERNAL_SERVER_ERROR', isOperational: boolean = true) {
+    }
+
+    error(message: string, meta: any = {}) {
         this.log('error', message, meta);
     }
 
-    warn(message, meta = {}) {
+    warn(message: string, meta: any = {}) {
         this.log('warn', message, meta);
     }
 
-    info(message, meta = {}) {
+    info(message: string, meta: any = {}) {
         this.log('info', message, meta);
     }
 
-    debug(message, meta = {}) {
+    debug(message: string, meta: any = {}) {
         this.log('debug', message, meta);
     }
 }

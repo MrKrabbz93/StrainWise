@@ -1,12 +1,12 @@
 
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
-import { cache } from './cache'; // Use our CacheService for rate limiting
+import { cache } from './cache.js'; // Use our CacheService for rate limiting
 
 export class JWTService {
-    secret: string;
-    expiresIn: string;
-    refreshExpiresIn: string;
+    public secret: string;
+    public expiresIn: string;
+    public refreshExpiresIn: string;
 
     constructor() {
         this.secret = process.env.JWT_SECRET || 'default-secret-change-me';
@@ -14,12 +14,12 @@ export class JWTService {
         this.refreshExpiresIn = '7d';
     }
 
-    signAccessToken(payload) {
-        return jwt.sign(payload, this.secret, { expiresIn: this.expiresIn });
+    signAccessToken(payload: any) {
+        return jwt.sign(payload, this.secret as jwt.Secret, { expiresIn: this.expiresIn as any });
     }
 
-    signRefreshToken(payload) {
-        return jwt.sign(payload, this.secret, { expiresIn: this.refreshExpiresIn });
+    signRefreshToken(payload: any) {
+        return jwt.sign(payload, this.secret as jwt.Secret, { expiresIn: this.refreshExpiresIn as any });
     }
 
     verify(token) {

@@ -1,5 +1,9 @@
 export class AppError extends Error {
-    constructor(message, statusCode = 500, code = 'INTERNAL_SERVER_ERROR', isOperational = true) {
+    public statusCode: number;
+    public code: string;
+    public isOperational: boolean;
+
+    constructor(message: string, statusCode = 500, code = 'INTERNAL_SERVER_ERROR', isOperational = true) {
         super(message);
         this.statusCode = statusCode;
         this.code = code;
