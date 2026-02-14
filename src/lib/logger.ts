@@ -21,8 +21,6 @@ class Logger {
         }
     }
 
-    constructor(message: string, statusCode: number = 500, code: string = 'INTERNAL_SERVER_ERROR', isOperational: boolean = true) {
-    }
 
     error(message: string, meta: any = {}) {
         this.log('error', message, meta);
