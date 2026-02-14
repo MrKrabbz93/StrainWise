@@ -10,19 +10,27 @@ const Layout = ({ children, activeTab, onTabChange, user, onLoginClick, onSettin
     const [lastScrollY, setLastScrollY] = React.useState(0);
 
     React.useEffect(() => {
+        let ticking = false;
+
         const handleScroll = () => {
-            const currentScrollY = window.scrollY;
+            if (!ticking) {
+                window.requestAnimationFrame(() => {
+                    const currentScrollY = window.scrollY;
 
-            // Show nav if scrolling up or at the very top
-            if (currentScrollY < lastScrollY || currentScrollY < 50) {
-                setIsNavVisible(true);
-            }
-            // Hide nav if scrolling down and not at the top
-            else if (currentScrollY > lastScrollY && currentScrollY > 50) {
-                setIsNavVisible(false);
-            }
+                    // Show nav if scrolling up or at the very top
+                    if (currentScrollY < lastScrollY || currentScrollY < 50) {
+                        setIsNavVisible(true);
+                    }
+                    // Hide nav if scrolling down and not at the top
+                    else if (currentScrollY > lastScrollY && currentScrollY > 50) {
+                        setIsNavVisible(false);
+                    }
 
-            setLastScrollY(currentScrollY);
+                    setLastScrollY(currentScrollY);
+                    ticking = false;
+                });
+                ticking = true;
+            }
         };
 
         window.addEventListener('scroll', handleScroll, { passive: true });

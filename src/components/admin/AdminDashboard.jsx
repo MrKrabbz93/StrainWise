@@ -5,9 +5,12 @@ import { Users, Book, Heart, Zap, Shield, AlertTriangle, CheckCircle, Search, Sp
 import { supabase } from '../../lib/supabase';
 import MarketingStudio from './MarketingStudio';
 import LogisticsDashboard from './LogisticsDashboard';
+import AdminConsole from './AdminConsole';
+import { useUserStore } from '../../lib/stores/user.store';
 
 const AdminDashboard = () => {
     const [activeTab, setActiveTab] = useState('analytics');
+    const { user } = useUserStore();
     const [stats, setStats] = useState({
         totalUsers: 0,
         totalJournals: 0,
@@ -22,8 +25,12 @@ const AdminDashboard = () => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        if (user?.account_type !== 'admin') {
+            window.location.href = '/';
+            return;
+        }
         fetchStats();
-    }, []);
+    }, [user]);
 
     const fetchStats = async () => {
         setLoading(true);
@@ -135,6 +142,13 @@ const AdminDashboard = () => {
                             }`}
                     >
                         <Zap className="w-4 h-4" /> Logistics
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('core')}
+                        className={`flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === 'core' ? 'bg-emerald-500 text-slate-950 shadow-lg shadow-emerald-500/20' : 'text-slate-500 hover:text-white'
+                            }`}
+                    >
+                        <Shield className="w-4 h-4" /> Core
                     </button>
                 </div>
             </div>
@@ -263,8 +277,10 @@ const AdminDashboard = () => {
                 </div>
             ) : activeTab === 'marketing' ? (
                 <MarketingStudio />
-            ) : (
+            ) : activeTab === 'logistics' ? (
                 <LogisticsDashboard />
+            ) : (
+                <AdminConsole />
             )}
         </div>
     );

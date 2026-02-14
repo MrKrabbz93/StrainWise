@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { Search, FlaskConical, ArrowRight, Activity, Dna, Droplet, MapPin, Sparkles, X } from 'lucide-react';
@@ -10,8 +10,6 @@ import { getStrainImageUrl } from '../lib/images';
 import { getDispensariesWithStrain } from '../lib/services/dispensary.service';
 import { addXP } from '../lib/gamification';
 import dispensariesData from '../data/dispensaries.json';
-
-import { useRef } from 'react'; // Added useRef
 const StrainLibrary = ({ userLocation, user }) => {
     const scrollRef = useRef(null); // Ref for carousel container
     const navigate = useNavigate();
@@ -430,12 +428,12 @@ const StrainLibrary = ({ userLocation, user }) => {
                             className="w-full h-full overflow-x-auto flex items-center gap-8 px-[50vw] pb-12 snap-x snap-mandatory custom-scrollbar"
                             style={{ scrollBehavior: isUserInteracting ? 'smooth' : 'auto' }} // Switch behavior for smooth drag vs linear auto-scroll
                         >
-                            {filteredStrains.map((strain, index) => (
+                            {filteredStrains.slice(0, 40).map((strain, index) => (
                                 <div key={`${strain.id}-${index}`} className="snap-center shrink-0 perspective-1000">
                                     <StrainCard3D
                                         strain={strain}
                                         onClick={() => handleSelectStrain(strain)}
-                                        containerRef={scrollRef} // Pass ref for viewport detection
+                                        containerRef={scrollRef}
                                     />
                                 </div>
                             ))}
@@ -518,7 +516,6 @@ const StrainLibrary = ({ userLocation, user }) => {
 const StrainCard3D = ({ strain, onClick, containerRef }) => {
     return (
         <motion.div
-            layoutId={`card-${strain.id}`}
             onClick={onClick}
             initial={{ scale: 0.85, opacity: 0.5, rotateY: 15 }}
             whileInView={{ scale: 1.1, opacity: 1, rotateY: 0, y: -10 }}

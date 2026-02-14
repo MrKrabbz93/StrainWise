@@ -30,32 +30,34 @@ const StrainCard = ({ strain, dispensaries, userLocation }) => {
         ? localDispensaries
         : (dispensaries || []).filter(d => Array.isArray(d.inventory) && d.inventory.includes(strain.id));
 
-    useEffect(() => {
-        let mounted = true;
+    const [hasFired, setHasFired] = useState(false);
 
-        const fetchData = async () => {
-            // 1. Fetch AI Reviews
+    // Lazy Data Fetching: Only trigger when user hovers or interacts
+    const triggerDataFetch = async () => {
+        if (hasFired) return;
+        setHasFired(true);
+
+        // 1. Fetch AI Reviews
+        try {
             const reviewsData = await generateCustomerReviews(strain.name);
-            if (!mounted) return;
             setReviews(reviewsData);
             setIsGenerating(false);
+        } catch (err) {
+            console.warn("AI Review generation skipped", err);
+        }
 
-            // 2. Fetch Nearby Availability
-            if (userLocation?.lat && userLocation?.lng) {
-                try {
-                    const nearby = await getDispensariesWithStrain(strain.id, userLocation.lat, userLocation.lng);
-                    if (mounted && nearby.length > 0) {
-                        setLocalDispensaries(nearby);
-                    }
-                } catch (err) {
-                    console.error("Failed to load local dispensaries", err);
+        // 2. Fetch Nearby Availability
+        if (userLocation?.lat && userLocation?.lng) {
+            try {
+                const nearby = await getDispensariesWithStrain(strain.id, userLocation.lat, userLocation.lng);
+                if (nearby.length > 0) {
+                    setLocalDispensaries(nearby);
                 }
+            } catch (err) {
+                console.error("Failed to load local dispensaries", err);
             }
-        };
-
-        fetchData();
-        return () => { mounted = false; };
-    }, [strain, userLocation]);
+        }
+    };
 
     const [imageState, setImageState] = useState('loading'); // 'loading' | 'loaded' | 'error'
     const [imageSrc, setImageSrc] = useState(getStrainImageUrl(strain));
@@ -108,7 +110,9 @@ const StrainCard = ({ strain, dispensaries, userLocation }) => {
                 whileHover={{ y: -8, scale: 1.02 }}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
+                onMouseEnter={triggerDataFetch}
                 onClick={() => {
+                    triggerDataFetch();
                     const slug = strain.name.toLowerCase().replace(/\s+/g, '-');
                     navigate(`/strain/${slug}`);
                 }}
@@ -225,7 +229,9 @@ const StrainCard = ({ strain, dispensaries, userLocation }) => {
                                     <div className="w-8 h-8 rounded-full bg-slate-900 border border-white/10 flex items-center justify-center group-hover/loc:border-emerald-500 group-hover/loc:bg-emerald-500 transition-all duration-300 shadow-lg">
                                         <MapPin className="w-3.5 h-3.5 text-emerald-400 group-hover/loc:text-slate-950" />
                                     </div>
-                                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-500 group-hover/loc:text-emerald-400 transition-colors">Locate</span>
+                                    <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400 group-hover/loc:text-emerald-300 transition-colors flex items-center gap-1">
+                                        Locate <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-ping" />
+                                    </span>
                                 </button>
                             ) : (
                                 <div className="flex items-center gap-2 opacity-30">

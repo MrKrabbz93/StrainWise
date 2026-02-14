@@ -48,6 +48,8 @@ export const withRateLimit = (limit = 100, window = 60) => async (req, res) => {
     }
 };
 
+import { supabase } from './supabase';
+
 export const withAuth = async (req, res) => {
     const authHeader = req.headers.authorization;
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -55,13 +57,15 @@ export const withAuth = async (req, res) => {
     }
 
     const token = authHeader.split(' ')[1];
-    const payload = jwtService.verify(token);
 
-    if (!payload) {
+    // Verify token with Supabase
+    const { data: { user }, error } = await supabase.auth.getUser(token);
+
+    if (error || !user) {
         throw new UnauthorizedError('Invalid or expired token');
     }
 
-    req.user = payload; // Attach user to request
+    req.user = user; // Attach Supabase user to request
 };
 
 export const withValidation = (schema) => async (req, res) => {

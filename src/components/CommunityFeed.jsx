@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -166,6 +166,14 @@ const CommunityFeed = () => {
             ))}
         </div>
     );
+    const spotlightUsers = useMemo(() => {
+        return posts.reduce((acc, p) => {
+            if (p.profiles && !acc.find(u => u.id === (p.profiles.id || p.user_id))) {
+                acc.push({ ...p.profiles, id: p.user_id });
+            }
+            return acc;
+        }, []).sort((a, b) => b.xp - a.xp);
+    }, [posts]);
 
     return (
         <div className="max-w-7xl mx-auto pt-12 pb-24 px-4">
@@ -186,10 +194,7 @@ const CommunityFeed = () => {
             </div>
 
             {/* Spotlight Section */}
-            {!loading && <Spotlight users={posts.reduce((acc, p) => {
-                if (p.profiles && !acc.find(u => u.id === p.profiles.id)) acc.push({ ...p.profiles, id: p.user_id });
-                return acc;
-            }, []).sort((a, b) => b.xp - a.xp)} />}
+            {!loading && <Spotlight users={spotlightUsers} />}
 
             <div className="grid lg:grid-cols-12 gap-12">
                 {/* Main Feed Column */}
@@ -231,7 +236,7 @@ const CommunityFeed = () => {
                                     key={post.id}
                                     initial={{ opacity: 0, y: 30 }}
                                     animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: i * 0.1 }}
+                                    transition={{ delay: Math.min(i * 0.1, 0.5) }}
                                     className="group relative bg-slate-900/40 border border-slate-800 rounded-3xl p-6 md:p-8 backdrop-blur-xl hover:border-emerald-500/30 transition-all duration-500 shadow-2xl hover:shadow-emerald-500/5"
                                 >
                                     <div className="flex flex-col md:flex-row gap-6">

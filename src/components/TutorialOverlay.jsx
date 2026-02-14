@@ -4,56 +4,82 @@ import { MessageSquare, Globe, BookOpen, Sparkles, CheckCircle, ArrowRight, X, U
 import { supabase } from '../lib/supabase';
 
 // High-impact visuals for each step
+// High-fidelity Tech-meets-Nature visuals for each step
 const STEPS = [
     {
         id: 'welcome',
-        title: 'Welcome to StrainWise',
-        subtitle: 'Your Personal AI Cannabis Sommelier',
-        desc: 'Experience a new era of cannabis discovery. From medical precision to recreational nuances, we use advanced AI to find your perfect match.',
+        title: 'The Intelligence Layer',
+        subtitle: 'Protocol-2.0 Active',
+        desc: 'Welcome to the convergence of nature and silicon. StrainWise leverages high-end neural networks to map cannabis profiles with institutional precision.',
         icon: Sparkles,
-        image: 'https://images.unsplash.com/photo-1550684848-fac1c5b4e853?q=80&w=2070&auto=format&fit=crop',
+        /* 
+           Image Generation Prompt: 
+           "A hyper-realistic cannabis leaf formed by glowing green computer motherboard traces, 
+           dark background, 8k resolution, cyberpunk organic style."
+        */
+        image: '/assets/tutorial/1-circuit-leaf.webp',
         color: 'from-emerald-400 to-cyan-400',
         bg: 'bg-emerald-500/10'
     },
     {
-        id: 'visual-ai',
-        title: 'Visual Intelligence',
-        subtitle: 'See Beyond the Leaf',
-        desc: 'Not sure what you are smoking? Snap a photo to identify potential genetics and analyze visual terpene indicators instantly using our computer vision engine.',
-        icon: Sparkles, // Or Camera if imported, but Sparkles works
-        image: 'https://images.unsplash.com/photo-1533038590840-1cde6e668a91?q=80&w=2187&auto=format&fit=crop', // Macro shot
-        color: 'from-purple-400 to-indigo-400',
-        bg: 'bg-purple-500/10'
+        id: 'ai-consultant',
+        title: 'The AI Consultant',
+        subtitle: 'Gemini-Powered Insight',
+        desc: 'Interact with a decentralized intelligence that understands your unique biology. Our fiber-optic neural network processes terpene data to curate your perfect harmony.',
+        icon: MessageSquare,
+        /* 
+           Image Generation Prompt: 
+           "A glowing digital brain made of green fiber optic cables, synapses firing, 
+           dark void background, representing artificial intelligence, 3D render."
+        */
+        image: '/assets/tutorial/2-digital-brain.webp',
+        color: 'from-emerald-500 to-green-600',
+        bg: 'bg-emerald-500/10'
     },
     {
         id: '3d-library',
-        title: 'Immersive 3D Archive',
-        subtitle: 'Award-Winning Design',
-        desc: 'Explore the world\'s most beautiful strain library. Scroll through our 3D holographic tunnel to discover rare genetics in a premium, tactile interface.',
+        title: '3D Strain Encyclopedia',
+        subtitle: 'The Floating Flower',
+        desc: 'Explore high-fidelity 3D renders of world-class genetics. Our 3D carousel allows you to inspect structure and trichome density in a cinematic virtual void.',
         icon: BookOpen,
-        image: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2128&auto=format&fit=crop', // Abstract 3D/Tunnel vibe
-        color: 'from-cyan-400 to-blue-500',
-        bg: 'bg-blue-500/10'
+        /* 
+           Image Generation Prompt: 
+           "A single high-quality 3D render of a cannabis flower floating in a dark studio space, 
+           cinematic lighting, sharp focus on trichomes, macro photography style."
+        */
+        image: '/assets/tutorial/3-floating-flower.webp',
+        color: 'from-cyan-400 to-emerald-500',
+        bg: 'bg-cyan-500/10'
     },
     {
-        id: 'pro',
-        title: 'Unlock StrainWise Pro',
-        subtitle: 'The Ultimate Experience',
-        desc: 'Upgrade to access the "Deep Sommelier" for hyper-personalized recommendations, unlimited global inventory searches, and an ad-free experience.',
-        icon: Lock, // Will need to import Lock or Star
-        image: 'https://images.unsplash.com/photo-1620641788421-7a1c342ea42e?q=80&w=2148&auto=format&fit=crop', // Gold/Premium Abstract
-        color: 'from-amber-300 via-orange-400 to-yellow-500', // Gold gradient
-        bg: 'bg-amber-500/10'
-    },
-    {
-        id: 'disclaimer-community',
-        title: 'Join the Beta',
-        subtitle: 'Community Driven',
-        desc: 'StrainWise is in active Beta. Share your knowledge, write journals, and help us map the world\'s cannabis supply. Together, we grow smarter.',
+        id: 'global-map',
+        title: 'Global Dispensary Map',
+        subtitle: 'The Supply Network',
+        desc: 'Navigate a dark-mode 3D visualization of the global supply chain. Locate verified inventory across Australia, Thailand, and the USA with real-time accuracy.',
         icon: Globe,
-        image: 'https://images.unsplash.com/photo-1556761175-5973dc0f32e7?q=80&w=2664&auto=format&fit=crop', // Community/Handshake
-        color: 'from-emerald-400 to-green-500',
+        /* 
+           Image Generation Prompt: 
+           "A 3D stylized globe, dark mode, glowing neon green location pins sticking out of Australia 
+           and Thailand, connecting lines, data visualization style."
+        */
+        image: '/assets/tutorial/4-global-network.webp',
+        color: 'from-emerald-500 via-emerald-400 to-cyan-400',
         bg: 'bg-emerald-500/10'
+    },
+    {
+        id: 'community',
+        title: 'Community & Journaling',
+        subtitle: 'The Mycelium Network',
+        desc: 'Join the viral loop of shared knowledge. Every journal entry you write strengthens the mycelium network, connecting pioneers through bioluminescent data nodes.',
+        icon: Sparkles,
+        /* 
+           Image Generation Prompt: 
+           "Glowing bioluminescent mycelium roots connecting in a network, neural network style, 
+           neon green and teal, dark background, representing connection."
+        */
+        image: '/assets/tutorial/5-mycelium-network.webp',
+        color: 'from-teal-400 to-emerald-500',
+        bg: 'bg-teal-500/10'
     }
 ];
 

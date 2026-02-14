@@ -18,6 +18,7 @@ const { default: updateRankingsHandler } = await import('./api/cron/update-ranki
 const { default: loginHandler } = await import('./api/auth/login.js');
 const { default: jobsHandler } = await import('./api/jobs.js');
 const { default: strainInfoHandler } = await import('./api/strain-info.js');
+const { default: statusHandler } = await import('./api/status.js');
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -53,6 +54,7 @@ app.all('/api/cron/update-rankings', handle(updateRankingsHandler));
 app.all('/api/auth/login', handle(loginHandler));
 app.all('/api/strain-info', handle(strainInfoHandler));
 app.all('/api/jobs', handle(jobsHandler));
+app.all('/api/status', handle(statusHandler));
 
 // Serve Static Assets (Vite Build)
 // We serve from 'dist' directory

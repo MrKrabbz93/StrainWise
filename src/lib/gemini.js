@@ -84,11 +84,27 @@ export const generateResponse = async (history, userMessage, persona = "helpful"
         Frame this as a "Live Concierge Service".`;
     }
 
+    const inventoryTools = [
+        {
+            name: "get_nearby_stock",
+            description: "Find if a specific cannabis strain is in stock at nearby dispensaries.",
+            inputSchema: {
+                type: "object",
+                properties: {
+                    strainName: { type: "string" },
+                    location: { type: "string", description: "City or Zip code" }
+                },
+                required: ["strainName", "location"]
+            }
+        }
+    ];
+
     const response = await aiService.generateResponse({
-        type: 'chat',
+        taskType: (userMessage.toLowerCase().includes('find') || userMessage.toLowerCase().includes('stock')) ? 'tool_use' : 'chat',
         prompt: userMessage,
         history,
-        systemPrompt
+        systemPrompt,
+        tools: inventoryTools
     });
 
     if (!response) {

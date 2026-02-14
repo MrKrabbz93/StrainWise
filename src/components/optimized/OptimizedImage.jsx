@@ -38,7 +38,7 @@ const OptimizedImage = ({ src, alt, fallbackSrc = 'https://images.unsplash.com/p
                 <motion.img
                     initial={{ opacity: 0 }}
                     animate={{ opacity: isLoaded ? 1 : 0 }}
-                    transition={{ duration: 0.5 }}
+                    transition={{ duration: 0.2 }}
                     src={imgSrc}
                     alt={alt}
                     className={`w-full h-full object-cover ${!isLoaded ? 'invisible' : ''}`}

@@ -25,6 +25,7 @@ import CommunityFeed from './components/CommunityFeed';
 import AdminDashboard from './components/admin/AdminDashboard';
 import Notifications from './components/Notifications';
 import AgeGate from './components/AgeGate';
+import Dashboard from './pages/Dashboard';
 
 import { useUserStore } from './lib/stores/user.store';
 import { getRank, awardEarlyAdopter } from './lib/gamification';
@@ -177,14 +178,20 @@ function App() {
       <AnimatePresence mode="wait">
         <motion.div
           key={location.pathname}
-          initial={{ opacity: 0, y: 10, filter: "blur(10px)" }}
-          animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-          exit={{ opacity: 0, y: -10, filter: "blur(10px)" }}
-          transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.2, ease: "linear" }}
           className="w-full"
         >
           <Routes>
-            <Route path="/" element={<ConsultantInterface onRecommend={handleRecommendations} userLocation={userLocation} />} />
+            <Route path="/" element={
+              <Dashboard
+                userLocation={userLocation}
+                onRecommend={handleRecommendations}
+                recommendations={recommendations}
+              />
+            } />
             <Route path="/consult" element={
               <div className="max-w-5xl mx-auto">
                 <div className="text-center mb-20">
@@ -206,7 +213,7 @@ function App() {
                 </div>
 
                 <div className="relative group">
-                  <div className="absolute -inset-1 bg-gradient-to-r from-emerald-500/20 to-cyan-500/20 rounded-[3rem] blur-2xl opacity-50 group-hover:opacity-100 transition duration-1000" />
+                  <div className="absolute -inset-1 bg-gradient-to-r from-emerald-500/20 to-cyan-500/20 rounded-[3rem] blur-xl opacity-50 group-hover:opacity-100 transition duration-500" />
                   <ConsultantInterface onRecommend={handleRecommendations} userLocation={userLocation} />
                 </div>
 
@@ -287,7 +294,7 @@ function App() {
           >
             <LandingPage onEnter={() => {
               setHasEntered(true);
-              navigate('/consult');
+              navigate('/');
               if (navigator.geolocation) {
                 // Requesting user location
                 navigator.geolocation.getCurrentPosition(

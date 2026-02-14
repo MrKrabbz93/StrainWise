@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { MapPin, Star, Search, Globe, ChevronDown, ExternalLink, Phone, Building2, Sparkles } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -17,6 +17,7 @@ const DispensaryList = () => {
     const [selectedCity, setSelectedCity] = useState('All');
     const [searchQuery, setSearchQuery] = useState('');
     const [claimingDispensary, setClaimingDispensary] = useState(null);
+    const [visibleLimit, setVisibleLimit] = useState(12);
     const user = useUserStore((state) => state.user);
 
     useEffect(() => {
@@ -67,19 +68,23 @@ const DispensaryList = () => {
         setLoading(false);
     };
 
-    // Derived state for filtering
-    const filteredDispensaries = dispensaries.filter(d => {
-        const matchesCountry = selectedCountry === 'All' || d.country === selectedCountry;
-        const matchesCity = selectedCity === 'All' || (d.city === selectedCity) || (d.region === selectedCity);
-        const matchesSearch = d.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            d.address.toLowerCase().includes(searchQuery.toLowerCase());
-        return matchesCountry && matchesCity && matchesSearch;
-    });
+    // Optimized filtering with useMemo
+    const filteredDispensaries = useMemo(() => {
+        return dispensaries.filter(d => {
+            const matchesCountry = selectedCountry === 'All' || d.country === selectedCountry;
+            const matchesCity = selectedCity === 'All' || (d.city === selectedCity) || (d.region === selectedCity);
+            const matchesSearch = d.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                d.address.toLowerCase().includes(searchQuery.toLowerCase());
+            return matchesCountry && matchesCity && matchesSearch;
+        });
+    }, [dispensaries, selectedCountry, selectedCity, searchQuery]);
 
     // Dynamic city options based on selected country
-    const availableCities = selectedCountry === 'All'
-        ? cities
-        : ['All', ...new Set(dispensaries.filter(d => d.country === selectedCountry).map(d => d.city || d.region).filter(Boolean))].sort();
+    const availableCities = useMemo(() => {
+        if (selectedCountry === 'All') return cities;
+        const filtered = dispensaries.filter(d => d.country === selectedCountry);
+        return ['All', ...new Set(filtered.map(d => d.city || d.region).filter(Boolean))].sort();
+    }, [dispensaries, selectedCountry, cities]);
 
     return (
         <div className="max-w-7xl mx-auto p-6 min-h-[calc(100vh-100px)]">
@@ -151,14 +156,13 @@ const DispensaryList = () => {
                     className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
                 >
                     <AnimatePresence>
-                        {filteredDispensaries.map((d, i) => (
+                        {filteredDispensaries.slice(0, visibleLimit).map((d, i) => (
                             <motion.div
                                 key={d.id}
-                                layout
-                                initial={{ opacity: 0, scale: 0.9 }}
+                                initial={{ opacity: 0, scale: 0.95 }}
                                 animate={{ opacity: 1, scale: 1 }}
-                                exit={{ opacity: 0, scale: 0.9 }}
-                                transition={{ duration: 0.2, delay: i * 0.05 }}
+                                exit={{ opacity: 0, scale: 0.95 }}
+                                transition={{ duration: 0.2, delay: Math.min(i * 0.05, 0.5) }}
                                 className="bg-slate-900 border border-slate-800 rounded-2xl p-6 hover:border-emerald-500/30 hover:shadow-2xl hover:shadow-emerald-500/10 transition-all group flex flex-col h-full"
                             >
                                 <div className="flex justify-between items-start mb-4">
@@ -174,6 +178,10 @@ const DispensaryList = () => {
                                         <h3 className="text-xl font-bold text-white group-hover:text-emerald-400 transition-colors line-clamp-2">
                                             {d.name}
                                         </h3>
+                                        <div className="mt-1 flex items-center gap-2">
+                                            <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+                                            <span className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Live Inventory Sync</span>
+                                        </div>
                                     </div>
                                     {d.is_featured ? (
                                         <div className="bg-emerald-500 text-slate-950 px-2 py-1 rounded-lg flex items-center gap-1 text-[10px] font-black uppercase tracking-tighter">
@@ -253,6 +261,18 @@ const DispensaryList = () => {
                             </motion.div>
                         ))}
                     </AnimatePresence>
+
+                    {/* Load More Button */}
+                    {filteredDispensaries.length > visibleLimit && (
+                        <div className="col-span-full flex justify-center pt-12 pb-8">
+                            <button
+                                onClick={() => setVisibleLimit(prev => prev + 12)}
+                                className="px-10 py-4 bg-slate-900 hover:bg-slate-800 border border-emerald-500/20 text-emerald-400 font-black uppercase tracking-widest rounded-2xl transition-all shadow-xl hover:shadow-emerald-500/10 active:scale-95 flex items-center gap-3"
+                            >
+                                <Sparkles className="w-5 h-5" /> Load More Locations
+                            </button>
+                        </div>
+                    )}
                 </motion.div>
             ) : (
                 <div className="text-center py-20 bg-slate-900/30 rounded-3xl border border-dashed border-slate-800">

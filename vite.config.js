@@ -11,7 +11,7 @@ const __dirname = path.dirname(__filename)
 export default defineConfig({
   server: {
     proxy: {
-      '/api': 'http://localhost:3001'
+      '/api': 'http://localhost:4173'
     }
   },
   resolve: {
