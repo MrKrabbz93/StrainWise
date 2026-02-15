@@ -275,7 +275,7 @@ const ConsultantInterface = ({ onRecommend, userLocation, externalInput, onInput
         <div className="flex justify-between items-center mb-6">
           <div className="flex items-center gap-4">
             <div className="w-14 h-14 flex items-center justify-center">
-              <img src="/logo-icon.svg" alt="StrainWise" className="w-full h-full object-contain scale-110" />
+              <img src="/logo-icon-card.png" alt="StrainWise" className="w-full h-full object-contain scale-110" />
             </div>
             <div>
               <h3 className="text-xl font-black text-white leading-none tracking-tight">AI Consultant</h3>

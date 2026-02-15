@@ -112,7 +112,7 @@ const AdminDashboard = () => {
                 <div className="flex items-center gap-6">
                     <div className="flex items-center gap-4">
                         <div className="w-16 h-16 flex items-center justify-center">
-                            <img src="/logo-icon.svg" alt="StrainWise" className="w-full h-full object-contain scale-110" />
+                            <img src="/logo-icon-body.png" alt="StrainWise" className="w-full h-full object-contain scale-110" />
                         </div>
                         <div>
                             <h2 className="text-3xl font-black text-white tracking-tight">MYCELIUM <span className="text-emerald-500">HQ</span></h2>
