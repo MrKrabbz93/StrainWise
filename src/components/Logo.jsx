@@ -6,7 +6,7 @@ export const Logo = ({ className = "w-12 h-12", withText = true }) => {
         <div className="flex items-center gap-4 select-none group cursor-pointer">
             <div className={`relative ${className} flex items-center justify-center`}>
                 <img
-                    src="/logo-icon-body.png"
+                    src="/logo-icon.svg"
                     alt="Logo"
                     className="w-full h-full object-contain scale-110"
                 />
